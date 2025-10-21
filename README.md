@@ -27,7 +27,7 @@ The study addresses the slow and fragmented nature of traditional road hazard re
 3. Methodology:
    - Agile iterative development with testing and evaluation phases assessing precision, recall, false-positive rate, and system uptime.
 
-# Awards
+# Distinction
 Capstone Project was nominated for publication in IT Journals/Conferences
 
 # Steps to run
