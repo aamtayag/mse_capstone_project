@@ -1,0 +1,24 @@
+#hazardGrid {
+   display: grid;
+   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+   gap: 1rem;
+   margin-top: 2rem;
+}
+
+.hazard-card {
+   border: 1px solid #ddd;
+   border-radius: .5rem;
+   padding: 1rem;
+   background: #fff;
+   position: relative;
+}
+
+.hazard-card img {
+   max-width: 100%;
+   border-radius: .25rem;
+   margin-bottom: .5rem;
+}
+
+.flagged {
+   border-color: #ffc107 !important;
+}

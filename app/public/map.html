@@ -1,0 +1,134 @@
+<!-- map.html -->
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <title>All Hazards Map</title>
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <style>
+         html, body, #map { height: 100%; margin: 0; padding: 0; }
+      </style>
+      <script
+         defer
+         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUqJv_YMAL1t-tW5MfZ-9f1aki4iXC2C0&callback=initMap&loading=async">
+      </script>
+   </head>
+   <body>
+      <div id="map"></div>
+      <script>
+         // A helper function to parse query parameters
+         function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+         }
+         // Verify if invoked from 'reporting' or 'moderation' menu
+         const mode = getQueryParam('mode');
+
+         // Hazard severity marker icon URL
+         const icons = {
+            1: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/green-dot.png',
+            2: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/blue-dot.png',
+            3: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/yellow-dot.png',
+            4: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/orange-dot.png',
+            5: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/red-dot.png'
+         };
+
+         // Set default location if geolocation is not supported or is denied (for testing only)
+         // For testing, disable location access in Chrome / Safari
+         // In production, set fallbackLoc to road safety authority HQ
+         const fallbackLoc = {
+            // CIC North Shore Location
+            // lat: -36.721903,
+            // lng: 174.723245
+            // Yoobee College CBD Location
+               lat: -36.857042,
+               lng: 174.764401
+            // Beeston Crescent Location
+            // lat: -37.026610,
+            // lng: 174.885707
+         };
+
+         function parseCookies() {
+            return document.cookie
+               .split('; ')
+               .reduce((acc, pair) => {
+                  const [k, v] = pair.split('=');
+                  acc[k] = v;
+                  return acc;
+               }, {});
+         }
+         
+         const myCooky = parseCookies();
+         const RADIUS = parseFloat(myCooky.RADIUS_KM) || 0;
+         const RADIUS_METERS = RADIUS * 1000;
+
+         async function initMap() {
+            // 1) Fetch all hazards
+            const res = await fetch('/fetch/allhazards', { credentials: 'same-origin' });              // RADIUS is not applied
+            const data = res.ok ? await res.json() : [];
+
+            // 2) Determine map center
+            const center = data.length
+            ? { lat: data[0].latitude, lng: data[0].longitude }
+            : { lat: 0, lng: 0 };
+
+            // 3) Create the map
+            const map = new google.maps.Map(document.getElementById('map'), {
+               center,
+               zoom: data.length ? 13 : 2
+            });
+
+            // 4) Plot each hazard
+            data.forEach(h => {
+               new google.maps.Marker({
+                  position: { lat: h.latitude, lng: h.longitude },
+                  map,
+                  icon: icons[h.user_severity_id] || icons[1],
+                  title: `${h.hazard_name}: ${h.hazard_desc}`
+               });
+            });
+
+            // 5) Add the user's current location
+            function showUserLocation(userLoc) {
+               new google.maps.Marker({
+                  position: userLoc,
+                  map,
+                  title: 'YOU ARE HERE!',
+               });
+               // Highlight the area covered by RADIUS variable
+               if (mode === 'reporting') {
+                  new google.maps.Circle({
+                     strokeColor: "#4285F4",
+                     strokeOpacity: 0.8,
+                     strokeWeight: 2,
+                     fillColor: "#4285F4",
+                     fillOpacity: 0.1,
+                     map: map,
+                     center: userLoc,
+                     radius: RADIUS_METERS
+                  });
+               }
+               // recenter to show both hazards & user
+               map.panTo(userLoc);
+            }
+
+            if (navigator.geolocation) {
+               navigator.geolocation.getCurrentPosition( pos => {
+                  const userLoc = {
+                     lat: pos.coords.latitude,
+                     lng: pos.coords.longitude
+                  };
+                  showUserLocation(userLoc);
+               }, err => {
+                  console.warn('Geolocation failed or denied:', err);
+                  showUserLocation(fallbackLoc);
+               });
+            } else {
+               // Geolocation is not supported
+               console.warn('Geolocation not supported by this browser.');
+               showUserLocation(fallbackLoc);
+            }
+         }
+      </script>
+   </body>
+</html>

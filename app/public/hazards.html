@@ -1,0 +1,376 @@
+<!-- hazards.html -->
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <title>Report a Road Hazard</title>
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <link 
+         rel="stylesheet" 
+         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" 
+         integrity="sha384-..." crossorigin="anonymous">
+      <link href="hazard.css" rel="stylesheet"/>
+      <script src="/socket.io/socket.io.js"></script>
+      <!--<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"          //debugging
+        integrity="sha384-+x7F/... (remove if you don’t need SRI)"
+        crossorigin="anonymous"></script>-->
+   </head>
+   <body class="bg-light">
+      <div class="container py-4">
+         
+         <h1 class="mb-4">Report a Road Hazard</h1>      
+         <form id="hazardForm" enctype="multipart/form-data" class="mb-5">
+            <!-- description, image, type, severity, hidden lat/lng -->      
+            <div class="mb-3">
+               <label class="form-label" for="hazardDesc">Description</label>
+               <textarea id="hazardDesc" name="hazard_desc" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+               <label class="form-label" for="hazardImage">Image</label>
+               <input type="file" id="hazardImage" name="hazard_image" class="form-control" accept="image/*" required>
+            </div>
+            <div class="mb-3">
+               <label class="form-label" for="hazardType">Type of Hazard</label>
+               <select id="hazardType" name="hazard_type_id" class="form-select" required>
+                  <option value="">— select —</option>
+                  <!-- optgroups as before… -->
+                  <optgroup label="Road Surface Defects">
+                     <option value="1">Potholes</option>
+                     <option value="2">Cracks and Fissures</option>
+                     <option value="3">Uneven Pavement/Expansion Joints</option>
+                     <option value="4">Loose Gravel or Debris</option>
+                     <option value="5">Spills (Oil, Chemicals, Fuel)</option>
+                     <option value="6">Faded Road Markings</option>
+                  </optgroup>
+                  <optgroup label="Environmental / Weather">
+                     <option value="7">Icy or Frosty Roads</option>
+                     <option value="8">Snow and Snow Drifts</option>
+                     <option value="9">Heavy Rain and Flooding</option>
+                     <option value="10">Fog and Reduced Visibility</option>
+                     <option value="11">High Winds and Hail</option>
+                     <option value="12">Blowing Dust or Sand</option>
+                  </optgroup>
+                  <optgroup label="Physical Obstructions">
+                     <option value="13">Fallen Trees or Branches</option>
+                     <option value="14">Rock Falls or Loose Rocks</option>
+                     <option value="15">Construction Debris</option>
+                     <option value="16">Broken Glass/Car Parts</option>
+                     <option value="17">Unattended or Disabled Vehicles</option>
+                  </optgroup>
+                  <optgroup label="Infrastructure / Signage">
+                     <option value="18">Malfunctioning Traffic Signals</option>
+                     <option value="19">Missing or Faded Road Signage</option>
+                     <option value="20">Damaged Guardrails/Barriers</option>
+                     <option value="21">Obstructed Lane Markings</option>
+                     <option value="22">Poorly Maintained Roadways</option>
+                  </optgroup>
+                  <optgroup label="Human / Vehicle-Related">
+                     <option value="23">Aggressive/Erratic Driving</option>
+                     <option value="24">Distracted or Impaired Driving</option>
+                     <option value="25">Inadequate Vehicle Maintenance</option>
+                     <option value="26">Road Rage Incidents</option>
+                  </optgroup>
+                  <optgroup label="Temporary / Event-Driven">
+                     <option value="27">Construction Zones and Detours</option>
+                     <option value="28">Accident Scenes</option>
+                     <option value="29">Animal Crossings/Wildlife</option>
+                     <option value="30">Event-Driven Hazards</option>
+                     <option value="31">Temporary Road Closures or Detours</option>
+                  </optgroup>
+               </select>
+            </div>
+            <div class="mb-3">
+               <label class="form-label" for="severity">Severity</label>
+               <select id="severity" name="user_severity_id" class="form-select" required>
+                  <option value="">— select —</option>
+                  <option value="1">Negligible</option>
+                  <option value="2">Minor</option>
+                  <option value="3">Moderate</option>
+                  <option value="4">High</option>
+                  <option value="5">Critical</option>
+               </select>
+            </div>
+            <div class="mb-3">
+               <label for="hazardPlace" class="form-label">Place Name</label>
+               <textarea id="hazardPlace" name="hazard_place" class="form-control" rows="1" placeholder="Optional (enter address if geolocation is not enabled)" ></textarea>
+            </div>
+            <input type="hidden" id="latitude" name="latitude">
+            <input type="hidden" id="longitude" name="longitude">
+            <button type="submit" class="btn btn-primary">Submit Report</button>
+         </form>
+         <!--<h1>Nearby Reported Hazards (≤ 500 m)</h1>-->
+         <h1 id="hazards-header">Nearby Reported Hazards (≤ <span id="radiusValue">RADIUS</span> km)</h1>
+         <div id="hazardGrid"></div><br>
+         <!--<button id="viewAllMap" class="btn btn-info mb-3">View All Hazards on Map</button>-->
+         <button id="viewAllMap" class="btn btn-primary mb-3">View All Hazards on Map</button>
+      </div>
+      <script>
+         const socket = io();
+         // Yoobee College Auckland CBD
+         //const userLat  = -36.857042;
+         //const userLong = 174.764401;
+         // 19B Beeston Crescent Manurewa
+         //const userLat  = -37.026610;
+         //const userLong = 174.885707;
+         // Comment out when using browser geolocation
+         const userLat  = null;
+         const userLong = null;
+
+         // react to real-time updates
+         socket.on('vote-updated', ({ hazard_id, vote_count }) => {
+            const badge = document.getElementById(`vote-badge-${hazard_id}`);
+            if (badge) badge.textContent = vote_count;
+         });
+         socket.on('status-updated', ({ hazard_id, hazard_status }) => {
+            const el = document.getElementById(`hazard_status_${hazard_id}`);
+            if (el) {el.textContent = hazard_status;}
+         });
+         socket.on('flag-updated', ({ hazard_id }) => {
+            const card = document.getElementById(`card-${hazard_id}`);
+            if (card) card.classList.add('flagged');
+         });
+         socket.on('hazard-approved', ({ hazard_id }) => {
+            const card = document.getElementById(`card-${hazard_id}`);
+            if (card) card.remove();
+         });
+         socket.on('hazard-rejected', ({ hazard_id }) => {
+            const card = document.getElementById(`card-${hazard_id}`);
+            if (card) card.remove();
+         });
+
+         document.addEventListener('DOMContentLoaded', () => {
+            const myCooky = parseCookies();
+            const RADIUS = parseFloat(myCooky.RADIUS_KM) || 0;
+            const span = document.getElementById('radiusValue');
+            if (span) span.textContent = RADIUS;
+
+            // used for testing hard-coded latitude/longitude
+            getUserLocation(pos => {
+               loadHazards(pos.coords.latitude, pos.coords.longitude);
+            });
+            /*
+            // get browser geolocation
+            if (navigator.geolocation) {
+               navigator.geolocation.getCurrentPosition(pos => {
+                  document.getElementById('latitude').value  = pos.coords.latitude;
+                  document.getElementById('longitude').value = pos.coords.longitude;
+
+                  //document.write('Latitude: ', document.getElementById('latitude').value);                             //debugging
+                  //document.write('Longitude: ', document.getElementById('longitude').value);                           //debugging
+
+                  loadHazards(pos.coords.latitude, pos.coords.longitude);
+               }, () => {
+                  loadAllHazards();
+               });
+            } else {
+               // No geolocation support
+               loadAllHazards();
+            }
+            */
+         });
+
+         // helper to parse cookies into an object
+         function parseCookies() {
+         return document.cookie
+            .split('; ')
+            .reduce((acc, pair) => {
+               const [k, v] = pair.split('=');
+               acc[k] = v;
+               return acc;
+            }, {});
+         }
+
+         // used for testing hard-coded latitude/longitude
+         function getUserLocation(callback) {
+            if (userLat != null && userLong != null) {
+               // use override
+               return callback({ coords: { latitude: userLat, longitude: userLong }});
+            }
+            // get browser geolocation
+            if (navigator.geolocation) {
+               navigator.geolocation.getCurrentPosition(pos => {
+                  document.getElementById('latitude').value  = pos.coords.latitude;
+                  document.getElementById('longitude').value = pos.coords.longitude;
+
+                  //document.write('Latitude: ', document.getElementById('latitude').value);                             //debugging
+                  //document.write('Longitude: ', document.getElementById('longitude').value);                           //debugging
+
+                  loadHazards(pos.coords.latitude, pos.coords.longitude);
+               }, () => {
+                  loadAllHazards();
+               });
+            } else {
+               // No geolocation support
+               loadAllHazards();
+            }
+         }
+
+         async function loadHazards(lat, lng) {
+            try {
+               const res = await fetch('/api/reports', {
+                  method: 'POST',
+                  credentials: 'same-origin',
+                  headers: {'Content-Type':'application/json'},
+                  body: JSON.stringify({ lat, lng })
+               });
+               if (!res.ok) throw new Error(await res.text());
+               //const list = await res.json();
+               //renderGrid(list);
+               renderGrid(await res.json());
+
+            } catch {
+               loadAllHazards();
+            }
+         }
+
+         async function loadAllHazards() {
+            // const res = await fetch('/hazards');
+            const res = await fetch('/hazards', { credentials: 'same-origin' });
+            if (!res.ok) {
+               console.error('Error fetching all hazards', res.statusText);
+               return;
+            }
+            renderGrid(await res.json());
+         }
+
+         function renderGrid(list) {
+            const grid = document.getElementById('hazardGrid');
+            grid.innerHTML = '';
+            list.forEach(h => {
+               const card = document.createElement('div');
+               card.id = `card-${h.hazard_id}`;
+               card.className = 'hazard-card';
+               card.innerHTML = `
+                  <img src="${h.hazard_image}" alt="photo">
+                  <p><strong>Hazard Type:</strong> ${h.hazard_name}</p>
+                  <p><strong>Hazard Desc:</strong> ${h.hazard_desc}</p>
+                  <p>
+                     <strong>Hazard Status:</strong>
+                     <span id="hazard_status_${h.hazard_id}">${h.status_name}</span>
+                  </p>
+                  <p><strong>Severity:</strong> ${h.severity_name}</p>
+                  ${h.distance != null
+                     ? `<p><strong>Distance:</strong> ${h.distance.toFixed(2)} km away</p><br>`
+                     : ''}
+                  <button
+                     data-id="${h.hazard_id}"
+                     class="btn btn-sm btn-outline-success upvote-btn">Upvote
+                     <span id="vote-badge-${h.hazard_id}" class="badge bg-success">${h.vote_count || 0}</span>
+                  </button>
+                  <button data-id="${h.hazard_id}"
+                     class="btn btn-sm btn-outline-warning flag-btn">Flag
+                     <span id="flag-badge-${h.hazard_id}" class="badge bg-success">${h.flag_count || 0}</span>
+                  </button>
+                  <small class="text-muted d-block mt-2">
+                     Reported: ${new Date(h.created_at).toLocaleString()}
+                  </small>
+               `;
+               grid.appendChild(card);
+            });
+
+            // Up-vote button handler
+            document.querySelectorAll('.upvote-btn').forEach(btn => {
+               btn.onclick = async () => {
+                  const hazardId = btn.dataset.id;
+
+                  try {
+                     const res = await fetch('/upvote-hazard', {
+                        method: 'POST',
+                        credentials: 'same-origin',      // include session cookie
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hazard_id: hazardId })
+                     });
+
+                     if (res.status === 403 || !res.ok) {
+                        // “no self-voting” or other forbidden message
+                        const msg = await res.text();
+                        return alert(`Error ${res.status}: ${msg}`);
+                     }
+
+                     //if (!res.ok) {
+                     //   const msg = await res.text();
+                     //   return alert(`Error ${res.status}: ${msg}`);
+                     //}
+
+                     // success: update the badge with the new vote count
+                     const { vote_count } = await res.json();
+                     document.getElementById(`vote-badge-${hazardId}`).textContent = vote_count;
+                  } catch (err) {
+                     console.error('Network or parsing error:', err);
+                     alert('Could not submit vote. Please try again.');
+                  }
+               };
+            });
+
+            // Flag button handler
+            document.querySelectorAll('.flag-btn').forEach(btn => {
+               btn.onclick = async () => {
+                  const hazardId = btn.dataset.id;
+                  const reason = prompt('Why are you flagging this report? (optional)');
+                  const res = await fetch('/flag-hazard', {
+                     method: 'POST',
+                     credentials: 'same-origin',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ hazard_id: hazardId, reason })
+                  });
+                  if (res.ok) {
+                     btn.disabled = true;
+                     btn.textContent = 'Flagged';
+                  } else {
+                     const text = await res.text();
+                     alert(`Error ${res.status}: ${text}`);
+                  }
+               };
+            });
+         }   // end of function renderGrid(list)
+
+         // Road hazard report submission handler
+         document.getElementById('hazardForm').addEventListener('submit', async e => {
+            e.preventDefault();
+
+            const data = new FormData(e.target);
+            try {
+               const res = await fetch('/report-hazard', {
+                  method: 'POST',
+                  body: data
+               });
+               if (res.ok) {
+                  e.target.reset();
+                  const lat = document.getElementById('latitude').value;
+                  const lng = document.getElementById('longitude').value;
+                  loadHazards(lat, lng);
+               } else {
+                  const text = await res.text();
+                  console.error('POST /report-hazard failed', res.status, text);
+                  alert(`Error ${res.status}: ${text}`);
+               }
+            } catch (err) {
+               console.error('Network error:', err);
+               alert('Network error: ' + err.message);
+            }
+         });
+
+         // Road hazards mapping handler
+         document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('viewAllMap').addEventListener('click', () => {
+               window.open('/map.html', '_blank');
+            });
+            
+            // plot existing geolocation + all hazards
+            /*
+            if (navigator.geolocation) {
+               navigator.geolocation.getCurrentPosition(pos => {
+                  loadHazards(pos.coords.latitude, pos.coords.longitude);
+               }, () => {
+                  loadAllHazards();
+               });
+            } else {
+               loadAllHazards();
+            }
+            */
+         });
+
+
+      </script>
+   </body>
+</html>

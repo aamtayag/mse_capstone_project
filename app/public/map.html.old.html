@@ -1,0 +1,110 @@
+<!-- map.html -->
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <title>All Hazards Map</title>
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <style>
+         html, body, #map { height:100%; margin:0; padding:0; }
+      </style>
+   </head>
+<body>
+   <div id="map"></div>
+   <script>
+      // hazard severity → marker icon URL
+      const icons = {
+         1: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/green-dot.png',
+         2: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/blue-dot.png',
+         3: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/yellow-dot.png',
+         4: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/orange-dot.png',
+         5: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/red-dot.png'
+      };
+
+   function initMap() {
+      fetch('/hazards',{credentials:'same-origin'})
+      //fetch('/api/reports',{credentials:'same-origin'})
+      .then(r=>r.json())
+        .then(data=>{
+          const center = data[0]||{latitude:0,longitude:0};
+          const map = new google.maps.Map(document.getElementById('map'), {
+            center: {lat:center.latitude, lng:center.longitude},
+            zoom: data.length?13:2
+          });
+          data.forEach(h=>{
+            new google.maps.Marker({
+              position:{lat:h.latitude,lng:h.longitude},
+              map, icon: icons[h.user_severity_id]||icons[5],
+              title:`${h.hazard_name}: ${h.hazard_desc}`
+            });
+          });
+        });
+    }
+
+    // dynamically add the API script each time
+    (function loadScript(){
+      const s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyDUqJv_YMAL1t-tW5MfZ-9f1aki4iXC2C0';
+      s.onload = initMap;
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+</html>
+
+<!--
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <title>All Hazards Map</title>
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <style>
+         html, body, #map { height:100%; margin:0; padding:0; }
+      </style>
+      <script
+         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUqJv_YMAL1t-tW5MfZ-9f1aki4iXC2C0&callback=initMap"
+         async defer>
+      </script>
+   </head>
+   <body>
+      <div id="map"></div>
+      <script>
+         // severity → icon URL
+         const icons = {
+            1: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/green-dot.png',
+            2: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/blue-dot.png',
+            3: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/yellow-dot.png',
+            4: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/orange-dot.png',
+            5: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/red-dot.png'
+         };
+
+         async function initMap() {
+            // fetch all hazards
+            const res  = await fetch('/hazards', { credentials: 'same-origin' });
+            const data = res.ok ? await res.json() : [];
+
+            // default center
+            const center = data.length
+            ? { lat: data[0].latitude, lng: data[0].longitude }
+            : { lat: 0, lng: 0 };
+
+            const map = new google.maps.Map(document.getElementById('map'), {
+            center,
+            zoom: data.length ? 13 : 2
+            });
+
+            // plot each hazard
+            data.forEach(h => {
+            new google.maps.Marker({
+               position: { lat: h.latitude, lng: h.longitude },
+               map,
+               icon: icons[h.user_severity_id] || icons[5],
+               title: `${h.hazard_name}: ${h.hazard_desc}`
+            });
+            });
+         }
+      </script>
+   </body>
+</html>
+-->

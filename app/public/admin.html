@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <title>Admin Dashboard</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+      <link href="admin.css" rel="stylesheet"/>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+      <script src="/socket.io/socket.io.js"></script>
+   </head>
+   <body class="bg-light">
+      <div class="container-fluid">
+         <!-- 1. Nav tabs -->
+         <ul class="nav nav-tabs mt-3" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+               <button class="nav-link active" id="moderation-tab" data-bs-toggle="tab" data-bs-target="#moderation" type="button" role="tab" aria-controls="moderation" aria-selected="true">
+                  🔧 Moderation
+               </button>
+            </li>
+            <li class="nav-item" role="presentation">
+               <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab" aria-controls="analytics" aria-selected="false">
+                  📊 Analytics
+               </button>
+            </li>
+            <li class="nav-item" role="presentation">
+               <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab" aria-controls="maintenance" aria-selected="false">
+                  ⚙️ Maintenance
+               </button>
+            </li>
+         </ul>
+
+         <!-- 2. Tab panes -->
+         <div class="tab-content pt-4" id="adminTabContent">
+            <!------------------------>
+            <!-- 2.1 Moderation Tab -->
+            <!------------------------>
+            <div class="tab-pane fade show active" id="moderation" role="tabpanel" aria-labelledby="moderation-tab">
+               <div class="card mb-4 shadow-sm border-0 rounded-4">
+                  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                     <span>
+                        <i class="bi bi-shield-exclamation me-2"></i>Hazard Moderation
+                     </span>
+                     <button id="viewAllMapModeration" class="btn btn-light btn-sm fw-semibold">
+                        <i class="bi bi-map me-1"></i> View All Hazards on Map
+                     </button>
+                  </div>
+                  <div class="card-body">
+                     <div id="statusMsg" class="mb-3 text-secondary">Loading flagged hazards…</div>
+                     <!-- hazards report will be shown here -->
+                     <div id="adminGrid" class="row g-4"></div>
+                  </div>
+               </div>
+            </div>
+
+            <!------------------------>
+            <!-- 2.2 Analytics Tab --->
+            <!------------------------>
+            <div class="tab-pane fade" id="analytics" role="tabpanel" aria-labelledby="analytics-tab">
+
+               <!-- 2.2.1 Header -->
+               <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-4 border-bottom">
+                  <h1 class="h2 mb-0">Analytics Dashboard</h1>
+                  <span id="lastUpdated" class="text-muted fs-6"></span>
+               </div>
+               
+               <!-- 2.2.2 Hazard Volume & Frequency Analytics -->
+               <div class="row g-3 mb-5">
+                  <div class="col-6 col-lg-2">
+                     <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                        <div class="card-body">
+                           <div class="mb-2"><span class="bg-primary bg-opacity-25 rounded-circle p-2"><i class="bi bi-flag fs-4 text-primary"></i></span></div>
+                           <div class="display-6 fw-bold" id="totalHazards">...</div>
+                           <div class="card-title fs-6 mt-2">Total Hazards</div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="col-6 col-lg-2">
+                     <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                        <div class="card-body">
+                           <div class="mb-2"><span class="bg-info bg-opacity-25 rounded-circle p-2"><i class="bi bi-calendar-week fs-4 text-info"></i></span></div>
+                           <div class="display-6 fw-bold" id="hazards7">...</div>
+                           <div class="card-title fs-6 mt-2">Last 7 Days</div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="col-6 col-lg-2">
+                     <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                        <div class="card-body">
+                           <div class="mb-2"><span class="bg-success bg-opacity-25 rounded-circle p-2"><i class="bi bi-calendar-range fs-4 text-success"></i></span></div>
+                           <div class="display-6 fw-bold" id="hazards30">...</div>
+                           <div class="card-title fs-6 mt-2">Last 30 Days</div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="col-6 col-lg-2">
+                     <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                        <div class="card-body">
+                           <div class="mb-2"><span class="bg-warning bg-opacity-25 rounded-circle p-2"><i class="bi bi-graph-up fs-4 text-warning"></i></span></div>
+                           <div class="display-6 fw-bold" id="avgDaily">...</div>
+                           <div class="card-title fs-6 mt-2">Avg Daily Reports</div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="col-6 col-lg-2">
+                     <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                        <div class="card-body">
+                           <div class="mb-2"><span class="bg-secondary bg-opacity-25 rounded-circle p-2"><i class="bi bi-clock-history fs-4 text-secondary"></i></span></div>
+                           <div class="display-6 fw-bold" id="avgResolution">...</div>
+                           <div class="card-title fs-6 mt-2">Avg Resolution<br>Time (days)</div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               <!-- For Show
+               <div class="row mb-4">
+                     <div class="col-md-6 mb-4">
+                        <h5>Hazards by Type</h5>
+                        <canvas id="hazardsByType"></canvas>
+                     </div>
+                     <div class="col-md-6">
+                        <h5>Hazards By Severity</h5>
+                        <div style="width: 350px; height: 350px;">
+                           <canvas id="hazardsBySeverity"></canvas>
+                        </div>
+                     </div>
+                  </div>  
+
+                  <div class="row mb-4">
+                    <div class="col-md-4 mb-4">
+                      <h5>Most Upvoted Hazards</h5>
+                      <ul class="list-group" id="topVoted"></ul>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                      <h5>Most Flagged Hazards</h5>
+                      <ul class="list-group" id="topFlagged"></ul>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                      <h5>Top Reporters</h5>
+                      <ul class="list-group" id="topUsers"></ul>
+                    </div>
+               </div>
+               For Show -->
+
+               <!-- 2.2.3 Hazard Classification Analytics -->
+               <div class="card mb-5 shadow-sm border-0 rounded-4">
+                  <div class="card-header bg-light fw-bold fs-5">
+                     <i class="bi bi-bar-chart-steps me-2 text-primary"></i>Hazard Classification Analytics
+                  </div>
+                  <div class="card-body">
+                     <div class="row g-4">
+                        <!--<div class="col-md-4">-->
+                        <div class="col-md-6 mb-4 mb-md-0">
+                           <h6 class="fw-bold">By Type</h6>
+                           <canvas id="hazardsByType"></canvas>
+                        </div>
+                        <div class="col-md-4">
+                           <h6 class="fw-bold">By Status</h6>
+                           <div style="width: 380px; height: 380px;">
+                              <canvas id="statusBreakdown"></canvas>
+                           </div>
+                        </div>
+                        <div class="col-md-4">
+                           <h6 class="fw-bold">By Severity</h6>
+                           <div style="width: 350px; height: 350px;">
+                              <canvas id="hazardsBySeverity"></canvas>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <!-- old version
+               <div class="row mb-5"></div>
+               <div class="row mb-5">
+                  <div class="col-12">
+                     <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">Hazard Classification Analytics</div>
+                        <div class="card-body">
+                           <div class="row">
+                              <div class="col-md-6 mb-4 mb-md-0">
+                                 <h5>By Type</h5>
+                                 <canvas id="hazardsByType"></canvas>
+                              </div>
+                              <div class="col-md-6">
+                                 <h5>By Status</h5>
+                                 <div style="width: 350px; height: 350px;">
+                                    <canvas id="statusBreakdown"></canvas>
+                                 </div>
+                              </div>
+                              <div class="col-md-6">
+                                 <h5>By Severity</h5>
+                                 <div style="width: 350px; height: 350px;">
+                                    <canvas id="hazardsBySeverity"></canvas>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               -->
+
+               <!-- 2.2.4 Location-Based Analytics Section -->
+               <div class="card mb-5 shadow-sm border-0 rounded-4">
+                  <div class="card-header bg-light fw-bold fs-5">
+                     <i class="bi bi-geo-alt-fill me-2 text-info"></i>Location-Based Analytics
+                  </div>
+                  <div class="card-body">
+                     <div class="row g-4">
+                        <div class="col-md-8">
+                           <h6 class="fw-bold">Hazard Density Map</h6>
+                           <div id="hazardMap" style="height: 400px; width: 100%;"></div>
+                        </div>
+                        <div class="col-md-4">
+                           <h6 class="fw-bold">Top 10 Hazardous Areas</h6>
+                           <ul class="list-group" id="topLocations"></ul>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <!-- old version
+               <div class="row mb-5">
+                  <div class="col-12">
+                     <div class="card border-info">
+                        <div class="card-header bg-info text-white">Location-Based Analytics</div>
+                        <div class="card-body">
+                           <div class="row">
+                              <div class="col-md-8 mb-4 mb-md-0">
+                                 <h5>Hazard Density Map</h5>
+                                 <div id="hazardMap" style="height: 400px; width: 100%;"></div>
+                              </div>
+                              <div class="col-md-4">
+                                 <h5>Top 10 Hazardous Areas</h5>
+                                 <ul class="list-group" id="topLocations"></ul>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               -->
+               
+               <!-- 2.2.5 User Engagement Analytics -->
+               <div class="row mb-5">
+                  <div class="col-12">
+                     <div class="card border-success">
+                        <div class="card-header bg-success text-white">User Engagement Analytics</div>
+                        <div class="card-body">
+                           <div class="row">
+                              <div class="col-md-4 mb-4 mb-md-0">
+                                 <h5>Most Upvoted Hazards</h5>
+                                 <ul class="list-group" id="topVoted"></ul>
+                              </div>
+                              <div class="col-md-4 mb-4 mb-md-0">
+                                 <h5>Most Flagged Hazards</h5>
+                                 <ul class="list-group" id="topFlagged"></ul>
+                              </div>
+                              <div class="col-md-4">
+                                 <h5>Top Reporting Users</h5>
+                                 <ul class="list-group" id="topUsers"></ul>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               <!-- 2.2.6 Trends & Insights Section -->
+               <div class="card mb-4 shadow-sm border-0 rounded-4">
+                  <div class="card-header bg-light fw-bold fs-5">
+                     <i class="bi bi-activity me-2 text-warning"></i>Trends & Insights
+                  </div>
+                  <div class="card-body">
+                     <div class="mb-4">
+                        <h6 class="fw-bold">Hazard Reporting Trend (last 30 days)</h6>
+                        <canvas id="trendsChart"></canvas>
+                     </div>
+                     <div>
+                        <h6 class="fw-bold">Spikes/Anomalies (last 30 days)</h6>
+                        <ul class="list-group" id="anomalies"></ul>
+                     </div>
+                  </div>
+               </div>
+               <!-- old version
+               <div class="row mb-5">
+                  <div class="col-12">
+                     <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark">Trends & Insights</div>
+                        <div class="card-body">
+                           <div class="mb-4">
+                              <h5>Hazard Reporting Trend (last 30 days)</h5>
+                              <canvas id="trendsChart"></canvas>
+                           </div>
+                           <div class="row mb-4"></div>
+                           <div>
+                              <h5>Spikes/Anomalies (last 30 days)</h5>
+                              <ul class="list-group" id="anomalies"></ul>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               -->
+            </div>  <!-- End of Analytics Tab-->
+
+
+            <!------------------------>
+            <!--- Maintenance Tab ---->
+            <!------------------------>
+            <div class="tab-pane fade" id="maintenance" role="tabpanel" aria-labelledby="maintenance-tab">
+               <h1 class="h2">Manage Hazard Classes</h1>
+               <button id="addClass" class="btn btn-success mb-3">Add New Class</button>
+               <table class="table table-striped">
+                  <thead>
+                     <tr><th>ID</th><th>Name</th><th>Description</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody id="classTable"></tbody>
+               </table>
+               <h1 class="h2 pt-4">Manage Hazard Types</h1>
+               <button id="addType" class="btn btn-success mb-3">Add New Type</button>
+               <table class="table table-striped">
+                  <thead>
+                     <tr><th>ID</th><th>Name</th><th>Class</th><th>Description</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody id="typeTable"></tbody>
+               </table>
+            </div>
+      
+         </div>  <!-- End of Tab panes-->
+      </div>
+
+      <script>
+      // Handle updates
+      const socket = io();
+      //socket.on('flag-updated', loadPending);
+      //socket.on('status-updated', loadPending);
+      socket.on('hazard-approved', loadPending);
+      socket.on('hazard-rejected', loadPending);
+
+      document.addEventListener('DOMContentLoaded', () => {
+         // Show all hazards when moderation tab is shown
+         loadPending();
+         // Render analytics when its tab is shown
+         document.getElementById('analytics-tab').addEventListener('shown.bs.tab', renderAnalytics);
+         // Load maintenance data when its tab is shown
+         document.getElementById('maintenance-tab').addEventListener('shown.bs.tab', () => { loadClasses(); loadTypes(); });
+      });
+
+      // --- Moderation ─────────────────────────────────────────────
+      async function loadPending() {
+         document.getElementById('statusMsg').textContent = 'Loading flagged hazards…';
+         try {
+            const res = await fetch('/admin/load-hazards', { credentials: 'same-origin' });
+            if (!res.ok) throw new Error(res.statusText);
+            const list = await res.json();
+            renderAdminGrid(list);
+            document.getElementById('statusMsg').textContent = list.length ? '' : 'No flagged hazards.';
+         } catch (err) {
+            console.error(err);
+            document.getElementById('statusMsg').textContent = 'Error loading hazards.';
+         }
+      }
+
+      function renderAdminGrid(list) {
+         const grid = document.getElementById('adminGrid');
+         grid.innerHTML = '';
+         list.forEach(h => {
+            const card = document.createElement('div');
+            card.className = 'card shadow-sm mb-3';
+            card.innerHTML = `
+               <img src="${h.hazard_image}" class="card-img-top" alt="hazard">
+               <div class="card-body">
+                  <p><strong>Hazard Type:</strong> ${h.hazard_name}</p>
+                  <p><strong>Hazard Desc:</strong> ${h.hazard_desc}</p>
+                  <p>
+                     <strong>Hazard Status:</strong>
+                     <span id="hazard_status_${h.hazard_id}">${h.status_name}</span>
+                  </p>
+                  <p><strong>Severity:</strong> ${h.severity_name}</p>
+                  <small class="text-muted d-block mt-2">
+                     Reported: ${new Date(h.created_at).toLocaleString()}
+                  </small><br>
+                  <p>
+                     <span class="badge bg-success">Votes: ${h.vote_count}</span>
+                     <span class="badge bg-danger ms-2">Flags: ${h.flag_count}</span>
+                  </p>
+                  <button class="btn btn-sm btn-outline-primary approve-btn" data-id="${h.hazard_id}">Approve</button>
+                  <button class="btn btn-sm btn-outline-danger ms-2 reject-btn" data-id="${h.hazard_id}">Reject</button>
+               </div>
+            `;
+            grid.appendChild(card);
+         });
+         bindApprovalButtons();
+      }
+
+      function bindApprovalButtons() {
+         document.querySelectorAll('.approve-btn').forEach(btn => {
+            btn.onclick = async () => {
+               const id = btn.dataset.id;
+               await fetch('/admin/approve-hazard', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hazard_id: id }) });
+            };
+         });
+         document.querySelectorAll('.reject-btn').forEach(btn => {
+            btn.onclick = async () => {
+               const id = btn.dataset.id;
+               await fetch('/admin/reject-hazard', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hazard_id: id }) });
+            };
+         });
+         document.getElementById('viewAllMap').onclick = () => window.open('/map.html', '_blank');
+      }
+
+
+      // --- Analytics ─────────────────────────────────────────────
+      async function renderAnalytics() {
+         // Fetch all analytics data at once
+         
+         // --- Overview ---
+         const res = await fetch('/api/analytics', { credentials: 'same-origin' });
+         const data = await res.json();
+         document.getElementById('totalHazards').textContent = data.overview.total ?? 0;
+         document.getElementById('hazards7').textContent = data.overview.last7 ?? 0;
+         document.getElementById('hazards30').textContent = data.overview.last30 ?? 0;
+         document.getElementById('avgDaily').textContent = data.overview.avgDaily ?? 0;
+         document.getElementById('avgResolution').textContent = data.overview.avgRows ?? 0;
+
+         // --- Classification ---
+         new Chart(document.getElementById('hazardsByType'), {
+            type: 'bar',
+            data: {
+               labels: data.type.labels,
+               datasets: [{ label: "Hazards", data: data.type.counts }]
+            }
+        });
+
+  new Chart(document.getElementById('hazardsBySeverity'), {
+    type: 'pie',
+    data: {
+      labels: data.severity.labels,
+      datasets: [{ data: data.severity.counts }]
+    }
+  });
+
+  
+    // --- Location: Hazard Density Map (Leaflet) ---
+  let map = L.map('hazardMap').setView([data.map.centerLat, data.map.centerLng], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+  data.map.points.forEach(p => {
+    L.circle([p.lat, p.lng], { radius: 80, color: '#e53e3e', fillOpacity: 0.3 }).addTo(map);
+  });
+  
+
+
+    // Top 10 Hazardous Areas
+  const topLoc = document.getElementById('topLocations');
+  topLoc.innerHTML = '';
+  data.topLocations.forEach(loc => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item';
+    li.textContent = `(${loc.lat.toFixed(3)}, ${loc.lng.toFixed(3)}): ${loc.count} hazards`;
+    topLoc.appendChild(li);
+  });
+
+
+    // --- Status & Workflow ---
+  new Chart(document.getElementById('statusBreakdown'), {
+    type: 'doughnut',
+    data: {
+      labels: data.status.labels,
+      datasets: [{ data: data.status.counts }]
+    }
+  });
+
+
+    // --- Engagement ---
+  const topVoted = document.getElementById('topVoted');
+  topVoted.innerHTML = '';
+  data.topVoted.forEach(h => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item';
+    li.textContent = `${h.hazard_desc} (Votes: ${h.vote_count})`;
+    topVoted.appendChild(li);
+  });
+
+  const topFlagged = document.getElementById('topFlagged');
+  topFlagged.innerHTML = '';
+  data.topFlagged.forEach(h => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item';
+    li.textContent = `${h.hazard_desc} (Flags: ${h.flag_count})`;
+    topFlagged.appendChild(li);
+  });
+
+  const topUsers = document.getElementById('topUsers');
+  topUsers.innerHTML = '';
+  data.topUsers.forEach(u => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item';
+    li.textContent = `${u.username} (${u.report_count} reports)`;
+    topUsers.appendChild(li);
+  });
+
+
+    // --- Trends & Insights ---
+  new Chart(document.getElementById('trendsChart'), {
+    type: 'line',
+    data: {
+      labels: data.trends.labels,
+      datasets: [{
+        label: 'Hazards/day',
+        data: data.trends.counts,
+        fill: true,
+        tension: 0.3
+      }]
+    }
+  });
+
+
+  // Spikes/Anomalies (days with > X% above average)
+  const anomalies = document.getElementById('anomalies');
+  anomalies.innerHTML = '';
+  data.trends.anomalies.forEach(a => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item list-group-item-warning';
+    li.textContent = `${a.date}: ${a.count} hazards`;
+    anomalies.appendChild(li);
+  });
+
+
+      }
+
+      // Trigger analytics render when the Analytics tab is shown
+      document.getElementById('analytics-tab').addEventListener('shown.bs.tab', renderAnalytics);
+
+
+
+
+/*
+    // Maintenance: Classes
+    async function loadClasses() {
+      const res = await fetch('/admin/classes', { credentials: 'same-origin' });
+      const classes = await res.json();
+      const tbody = document.getElementById('classTable');
+      tbody.innerHTML = '';
+      classes.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${c.class_id}</td>
+          <td>${c.class_name}</td>
+          <td>${c.class_desc}</td>
+          <td>
+            <button class="btn btn-sm btn-warning edit-class" data-id="${c.class_id}">Edit</button>
+            <button class="btn btn-sm btn-danger ms-2 delete-class" data-id="${c.class_id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Maintenance: Types
+    async function loadTypes() {
+      const res = await fetch('/admin/types', { credentials: 'same-origin' });
+      const types = await res.json();
+      const tbody = document.getElementById('typeTable');
+      tbody.innerHTML = '';
+      types.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${t.hazard_id}</td>
+          <td>${t.hazard_name}</td>
+          <td>${t.class_name}</td>
+          <td>${t.hazard_desc}</td>
+          <td>
+            <button class="btn btn-sm btn-warning edit-type" data-id="${t.hazard_id}">Edit</button>
+            <button class="btn btn-sm btn-danger ms-2 delete-type" data-id="${t.hazard_id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+    */
+      </script>
+   </body>
+</html>

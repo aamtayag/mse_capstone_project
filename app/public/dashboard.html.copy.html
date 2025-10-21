@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="utf-8">
+      <title>SafeRoads Navigator Dashboard</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link href="dashboard.css" rel="stylesheet"/>
+
+      <!-- JS Libraries / Third-parties for interactive components -->
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet">
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+      <!-- Include the JavaScript client-side library for Socket.IO -->
+      <script src="/socket.io/socket.io.js"></script>
+   </head>
+   <body>
+      <header class="navbar sticky-top bg-dark flex-md-nowrap p-0 shadow w-100 custom-header" data-bs-theme="dark">
+         <a class="navbar-brand px-3 fs-6 text-white" href="#">
+            <span class="fs-4 fw-bold">
+               <i class="bi bi-geo-alt-fill me-2"></i>SafeRoads Navigator v1.o <i class="bi bi-c-circle" style="font-size: 14px; vertical-align: super;"></i>
+            </span>
+         </a>
+         <!--<div id="userInfo" class="ms-auto d-flex align-items-center me-4 text-white" style="font-size: 1rem;"></div>-->
+         <div class="dropdown ms-auto me-4">
+            <a class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" href="#" role="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+               <i class="bi bi-person-circle me-2" style="font-size: 1.2rem;"></i>
+               <span id="usernameLabel"></span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+               <li><a class="dropdown-item" href="#" id="headerSignOut"><i class="bi bi-box-arrow-right me-2"></i>Sign out</a></li>
+            </ul>
+         </div>
+      </header>
+
+      <div class="container-fluid">
+         <div class="row flex-nowrap">
+            <!------------------------------------------>
+            <!-- **********  Sidebar Menu  ********** -->
+            <!------------------------------------------>
+            <!-- dynamically generated sidebar menu -->
+            <nav class="col-auto col-lg-2 d-flex flex-column sidebar position-relative py-4 px-3 custom-sidebar">
+               <ul class="nav nav-pills flex-column mb-auto" id="menuList"></ul>
+            </nav>
+            <!-- Old-style sidebar menu
+            <nav class="col-auto col-lg-2 d-flex flex-column sidebar position-relative py-4 px-3">
+               <ul class="nav nav-pills flex-column mb-auto" id="menuList">
+                  <li class="nav-item"><a href="#" class="nav-link active" data-content="hazard-reporting"><i class="bi bi-flag"></i>Hazard Reporting</a></li>
+                  <li><a href="#" class="nav-link" data-content="hazard-moderation"><i class="bi bi-shield-exclamation"></i>Hazard Moderation</a></li>
+                  <li><a href="#" class="nav-link" data-content="analytics"><i class="bi bi-graph-up"></i>Analytics</a></li>
+                  <li><a href="#" class="nav-link" data-content="maintenance"><i class="bi bi-gear"></i>Maintenance</a></li>
+                  <li><a href="#" class="nav-link" data-content="reports"><i class="bi bi-file-earmark-bar-graph"></i>Reports</a></li>
+                  <li><a href="/logout" class="nav-link px-3" id="signOutBtn"><i class="bi bi-box-arrow-right"></i>Sign out</a></li>
+               </ul>
+            </nav>
+            -->
+
+            <!-------------------------------------------->
+            <!-- **********  Panel Contents  ********** -->
+            <!-------------------------------------------->
+            <main class="col px-0 main-content">
+
+               <!--*******************************************************************************************************************-->
+               <!--******************************************  1. Hazard Reporting Panel  ********************************************-->
+               <!--*******************************************************************************************************************-->
+               <div id="panel-hazard-reporting" class="content-panel">
+                  <div class="container py-1">
+
+                     <!------------------>
+                     <!-- Panel Header -->
+                     <!------------------>
+                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-4 border-bottom">
+                        <div class="dashboard-header">Hazard Reporting Dashboard</div>
+                        <span id="lastUpdated" class="text-muted fs-6"></span>
+                     </div>
+                     <!---------------->
+                     <!-- Panel Body -->
+                     <!---------------->
+                     <div class="card shadow-sm border-0 rounded-4 mb-4">
+                        <!------------------>
+                        <!-- Header Title -->
+                        <!------------------>
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                           <div>
+                              <i class="bi bi-flag-fill me-2"></i>Hazard Reporting
+                           </div>
+                           <button id="viewAllMapReporting" class="btn btn-light btn-sm fw-semibold">
+                              <i class="bi bi-map me-1"></i> View All Hazards on Map
+                           </button>
+                        </div><br>
+                        <!------------------------>
+                        <!-- Bootstrap Nav Tabs -->
+                        <!------------------------>
+                        <div class="card-body">
+                           <!----------------->
+                           <!-- Tab Headers -->
+                           <!----------------->
+                           <ul class="nav nav-tabs mb-3" id="hazardTab" role="tablist">
+                              <!-- Submit a Hazard Report Tab -->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link active" id="submit-tab" data-bs-toggle="tab" data-bs-target="#submitPanel" type="button" role="tab" aria-controls="submitPanel" aria-selected="true">
+                                    Submit a Hazard Report
+                                 </button>
+                              </li>
+                              <!-- Nearby Reported Hazards Tab-->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link" id="nearby-tab" data-bs-toggle="tab" data-bs-target="#nearbyPanel" type="button" role="tab" aria-controls="nearbyPanel" aria-selected="false">
+                                    Nearby Reported Hazards (≤ <span id="radiusValue">RADIUS</span> km)
+                                 </button>
+                              </li>
+                           </ul>
+                           <!------------------>
+                           <!-- Tab Contents -->
+                           <!------------------>
+                           <div class="tab-content" id="hazardTabContent">
+                              <!-------------------------------->
+                              <!-- Submit a Hazard Report Tab -->
+                              <!-------------------------------->
+                              <div class="tab-pane fade show active" id="submitPanel" role="tabpanel" aria-labelledby="submit-tab">
+                                 <form id="hazardForm" enctype="multipart/form-data">
+                                    <div class="form-floating mb-3">
+                                       <textarea id="hazardDesc" name="hazard_desc" class="form-control" placeholder="Describe the hazard" required style="height: 100px"></textarea>
+                                       <label for="hazardDesc"><i class="bi bi-chat-left-text me-1"></i>Description of hazard</label>
+                                    </div>
+                                    <div class="mb-3">
+                                       <label class="form-label" for="hazardImage">
+                                          <i class="bi bi-card-image me-1"></i>Image
+                                       </label>
+                                       <input type="file" id="hazardImage" name="hazard_image" class="form-control" accept="image/*" required>
+                                    </div>
+                                    <div class="mb-3">
+                                       <label class="form-label" for="hazardType"><i class="bi bi-signpost me-1"></i>Type of Hazard</label>
+                                       <select id="hazardType" name="hazard_type_id" class="form-select" required>
+                                          <option value="">— select —</option>
+                                          <optgroup label="Road Surface Defects">
+                                             <option value="1">Potholes</option>
+                                             <option value="2">Cracks and Fissures</option>
+                                             <option value="3">Uneven Pavement/Expansion Joints</option>
+                                             <option value="4">Loose Gravel or Debris</option>
+                                             <option value="5">Spills (Oil, Chemicals, Fuel)</option>
+                                             <option value="6">Faded Road Markings</option>
+                                          </optgroup>
+                                          <optgroup label="Environmental / Weather">
+                                             <option value="7">Icy or Frosty Roads</option>
+                                             <option value="8">Snow and Snow Drifts</option>
+                                             <option value="9">Heavy Rain and Flooding</option>
+                                             <option value="10">Fog and Reduced Visibility</option>
+                                             <option value="11">High Winds and Hail</option>
+                                             <option value="12">Blowing Dust or Sand</option>
+                                          </optgroup>
+                                          <optgroup label="Physical Obstructions">
+                                             <option value="13">Fallen Trees or Branches</option>
+                                             <option value="14">Rock Falls or Loose Rocks</option>
+                                             <option value="15">Construction Debris</option>
+                                             <option value="16">Broken Glass/Car Parts</option>
+                                             <option value="17">Unattended or Disabled Vehicles</option>
+                                          </optgroup>
+                                          <optgroup label="Infrastructure / Signage">
+                                             <option value="18">Malfunctioning Traffic Signals</option>
+                                             <option value="19">Missing or Faded Road Signage</option>
+                                             <option value="20">Damaged Guardrails/Barriers</option>
+                                             <option value="21">Obstructed Lane Markings</option>
+                                             <option value="22">Poorly Maintained Roadways</option>
+                                          </optgroup>
+                                          <optgroup label="Human / Vehicle-Related">
+                                             <option value="23">Aggressive/Erratic Driving</option>
+                                             <option value="24">Distracted or Impaired Driving</option>
+                                             <option value="25">Inadequate Vehicle Maintenance</option>
+                                             <option value="26">Road Rage Incidents</option>
+                                          </optgroup>
+                                          <optgroup label="Temporary / Event-Driven">
+                                             <option value="27">Construction Zones and Detours</option>
+                                             <option value="28">Accident Scenes</option>
+                                             <option value="29">Animal Crossings/Wildlife</option>
+                                             <option value="30">Event-Driven Hazards</option>
+                                             <option value="31">Temporary Road Closures or Detours</option>
+                                          </optgroup>
+                                       </select>
+                                    </div>
+                                    <div class="mb-3">
+                                       <label class="form-label" for="severity"><i class="bi bi-exclamation-triangle me-1"></i>Severity</label>
+                                       <select id="severity" name="user_severity_id" class="form-select" required>
+                                          <option value="">— select —</option>
+                                          <option value="1">Negligible</option>
+                                          <option value="2">Minor</option>
+                                          <option value="3">Moderate</option>
+                                          <option value="4">High</option>
+                                          <option value="5">Critical</option>
+                                       </select>
+                                    </div>
+                                    <div class="form-floating mb-3">
+                                       <textarea id="hazardPlace" name="hazard_place" class="form-control" placeholder="Optional place name" style="height:45px"></textarea>
+                                       <label for="hazardPlace"><i class="bi bi-geo-alt me-1"></i>Place Name (no geolocation support)</label>
+                                    </div>
+                                    <input type="hidden" id="latitude" name="latitude">
+                                    <input type="hidden" id="longitude" name="longitude">
+                                    <button type="submit" class="btn btn-primary w-100 py-2">Submit Report</button>
+                                 </form>
+                              </div>
+                              <!--------------------------------->
+                              <!-- Nearby Reported Hazards Tab -->
+                              <!--------------------------------->
+                              <div class="tab-pane fade" id="nearbyPanel" role="tabpanel" aria-labelledby="nearby-tab">
+                                 <div class="card-body pb-0" id="hazardGrid">
+                                    <div id="hazardLoader" class="text-center my-4" style="display: none;">
+                                       <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                          <span class="visually-hidden">Loading...</span>
+                                       </div>
+                                       <div class="mt-2">Loading nearby hazards…</div>
+                                    </div>
+                                    <div id="hazardEmpty" class="alert alert-info text-center my-3 d-none">No nearby hazards found.</div>
+                                    <div id="hazardList"></div>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+
+                  </div>
+               </div>
+               <!-- END: Hazard Reporting Panel-->
+
+
+               <!--*******************************************************************************************************************-->
+               <!--******************************************  2. Hazard Moderation Panel  *******************************************-->
+               <!--*******************************************************************************************************************-->
+               <div id="panel-hazard-moderation" class="content-panel d-none">
+                  <div class="container py-1">
+                     <!------------------>
+                     <!-- Panel Header -->
+                     <!------------------>
+                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-4 border-bottom">
+                        <div class="dashboard-header">Hazard Moderation Dashboard</div>
+                        <span id="lastUpdated" class="text-muted fs-6"></span>
+                     </div>
+                     <!---------------->
+                     <!-- Panel Body -->
+                     <!---------------->
+                     <div class="card mb-4 shadow-sm border-0 rounded-4">
+                        <!------------------>
+                        <!-- Header Title -->
+                        <!------------------>
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center me-2">
+                           <span>
+                              <i class="bi bi-shield-check me-2"></i>Hazard Moderation
+                           </span>
+                           <button id="viewAllMapModeration" class="btn btn-light btn-sm fw-semibold">
+                              <i class="bi bi-map me-1"></i> View All Hazards on Map
+                           </button>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between mt-4 px-2">
+                           <div class="d-flex align-items-center me-3">
+                              <label for="sortHazards" class="form-label mb-0 me-2 fw-semibold">Sort by:</label>
+                              <select id="sortHazards" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                                 <option value="flags">Flag count (default)</option>
+                                 <option value="upvotes">Upvote count</option>
+                                 <option value="status">Hazard Status</option>
+                                 <option value="severity">Severity</option>
+                              </select>
+                           </div>
+                           <div id="statusMsg" class="text-secondary">Loading all hazards...</div>
+                        </div>
+
+                        <!--------------------->
+                        <!-- Moderation Grid -->
+                        <!--------------------->
+                        <div class="card-body">
+                           <!--<div id="statusMsg" class="mb-3 text-secondary">Loading all hazards...</div>-->
+                           <!-- hazard reports will be loaded here -->
+                           <div id="adminGridModeration" class="row"></div>
+                        </div>
+                     </div>
+
+                  </div>
+               </div>
+               <!-- END: Hazard Moderation Panel -->
+
+
+               <!--*******************************************************************************************************************-->
+               <!--**********************************************  3. Analytics Panel  ***********************************************-->
+               <!--*******************************************************************************************************************-->
+               <div id="panel-analytics" class="content-panel d-none">
+                  <div class="container py-1">
+
+                     <!------------------>
+                     <!-- Panel Header -->
+                     <!------------------>
+                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-4 border-bottom">
+                        <div class="dashboard-header">Analytics Dashboard</div>
+                        <span id="lastUpdated" class="text-muted fs-6"></span>
+                     </div>
+                     <!----------------------------------------->
+                     <!-- Hazard Volume & Frequency Analytics -->
+                     <!----------------------------------------->
+                     <div class="row g-3 mb-5">
+                        <!-- Total Hazards -->
+                        <div class="col-6 col-lg-2">
+                           <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                              <div class="card-body">
+                                 <div class="mb-2">
+                                    <span class="bg-primary bg-opacity-25 rounded-circle p-2"><i class="bi bi-flag fs-4 text-primary"></i></span>
+                                 </div>
+                                 <div class="display-6 fw-bold" id="totalHazards">...</div>
+                                 <div class="card-title fs-6 mt-2">Total Hazards</div>
+                              </div>
+                           </div>
+                           <!-- With highlighting & click feature [TBD]
+                           <div class="card analytics-card text-center h-100 mb-3">
+                              <div class="card-body py-4">
+                                 <div class="mb-2">
+                                    <span class="bg-primary bg-opacity-25 rounded-circle p-2">
+                                       <i class="bi bi-flag fs-4 text-primary"></i>
+                                    </span>
+                                 </div>
+                                 <div class="analytics-metric" id="totalHazards">...</div>
+                                 <div class="analytics-label">Total Hazards</div>
+                              </div>
+                           </div>
+                           -->
+                        </div>
+                        <!-- Weekly Total -->
+                        <div class="col-6 col-lg-2">
+                           <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                              <div class="card-body">
+                                 <div class="mb-2">
+                                    <span class="bg-info bg-opacity-25 rounded-circle p-2"><i class="bi bi-calendar-week fs-4 text-info"></i></span>
+                                 </div>
+                                 <div class="display-6 fw-bold" id="hazards7">...</div>
+                                 <div class="card-title fs-6 mt-2">Last 7 Days</div>
+                              </div>
+                           </div>
+                        </div>
+                        <!-- Monthly Total -->
+                        <div class="col-6 col-lg-2">
+                           <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                              <div class="card-body">
+                                 <div class="mb-2">
+                                    <span class="bg-success bg-opacity-25 rounded-circle p-2"><i class="bi bi-calendar-range fs-4 text-success"></i></span>
+                                 </div>
+                                 <div class="display-6 fw-bold" id="hazards30">...</div>
+                                 <div class="card-title fs-6 mt-2">Last 30 Days</div>
+                              </div>
+                           </div>
+                        </div>
+                        <!-- Average Daily Reports -->
+                        <div class="col-6 col-lg-2">
+                           <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                              <div class="card-body">
+                                 <div class="mb-2">
+                                    <span class="bg-warning bg-opacity-25 rounded-circle p-2"><i class="bi bi-graph-up fs-4 text-warning"></i></span>
+                                 </div>
+                                 <div class="display-6 fw-bold" id="avgDaily">...</div>
+                                 <div class="card-title fs-6 mt-2">Avg Daily Reports</div>
+                              </div>
+                           </div>
+                        </div>
+                        <!-- Avevare Resolution Time (days) -->
+                        <div class="col-6 col-lg-2">
+                           <div class="card shadow-sm border-0 rounded-4 text-center h-100">
+                              <div class="card-body">
+                                 <div class="mb-2">
+                                    <span class="bg-secondary bg-opacity-25 rounded-circle p-2"><i class="bi bi-clock-history fs-4 text-secondary"></i></span>
+                                 </div>
+                                 <div class="display-6 fw-bold" id="avgResolution">...</div>
+                                 <div class="card-title fs-6 mt-2">Avg Resolution<br>Time (days)</div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <!------------------------------------->
+                     <!-- Hazard Classification Analytics -->
+                     <!------------------------------------->
+                     <div class="card mb-5 shadow-sm border-0 rounded-4">
+                        <!-- Header Title -->
+                        <div class="card-header bg-light fw-bold fs-5">
+                           <i class="bi bi-tags-fill me-2 text-primary"></i>Hazard Classification Analytics
+                        </div>
+                        <div class="card-body">
+                           <!-- Hazards by Type -->
+                           <div class="mb-4" style="max-width: 900px;">
+                              <h6 class="fw-bold">By Type</h6>
+                              <canvas id="hazardsByType" style="min-height:280px; width:100%;"></canvas>
+                           </div><br>
+                           <div class="row g-4">
+                              <!-- Hazards by Status -->
+                              <div class="col-md-6">
+                                 <h6 class="fw-bold">By Status</h6>
+                                 <div style="width:100%; max-width:370px; margin:auto;">
+                                    <canvas id="hazardsByStatus"></canvas>
+                                 </div>
+                              </div>
+                              <!-- Hazards by Severity -->
+                              <div class="col-md-6">
+                                 <h6 class="fw-bold">By Severity</h6>
+                                 <div style="width:100%; max-width:340px; margin:auto;">
+                                    <canvas id="hazardsBySeverity"></canvas>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <!-------------------------------------->
+                     <!-- Location-Based Analytics Section -->
+                     <!-------------------------------------->
+                     <div class="card mb-5 shadow-sm border-0 rounded-4">
+                        <!-- Header Title -->
+                        <div class="card-header bg-light fw-bold fs-5">
+                           <i class="bi bi-geo-alt-fill me-2 text-info"></i>Location-Based Analytics
+                        </div>
+                        <div class="card-body">
+                           <div class="row g-4">
+                              <!-- Hazard Density Map -->
+                              <div class="col-md-8">
+                                 <h6 class="fw-bold">Hazard Density Map</h6>
+                                 <div id="hazardMap" style="height: 400px; width: 100%;"></div>
+                              </div>
+                              <!-- Top 10 Hazardous Areas -->
+                              <div class="col-md-4">
+                                 <h6 class="fw-bold">Top 10 Hazardous Areas</h6>
+                                 <ul class="list-group" id="topLocations"></ul>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <!------------------------------->
+                     <!-- User Engagement Analytics -->
+                     <!------------------------------->
+                     <div class="card mb-5 shadow-sm border-0 rounded-4">
+                        <!-- Header Title -->
+                        <div class="card-header bg-light fw-bold fs-5">
+                           <i class="bi bi-people-fill me-2 text-info"></i>User Engagement Analytics
+                        </div>
+                        <div class="card-body">
+                           <div class="row g-4">
+                              <!-- Most Upvoted Hazards -->
+                              <div class="col-md-4 mb-4 mb-md-0">
+                                 <h5>Most Upvoted Hazards</h5>
+                                 <ul class="list-group" id="topVoted"></ul>
+                              </div>
+                              <!-- Most Flagged Hazards -->
+                              <div class="col-md-4 mb-4 mb-md-0">
+                                 <h5>Most Flagged Hazards</h5>
+                                 <ul class="list-group" id="topFlagged"></ul>
+                              </div>
+                              <!-- Top Reporting Users -->
+                              <div class="col-md-4">
+                                 <h5>Top Reporting Users</h5>
+                                 <ul class="list-group" id="topUsers"></ul>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <!------------------------------->
+                     <!-- Trends & Insights Section -->
+                     <!------------------------------->
+                     <div class="card mb-4 shadow-sm border-0 rounded-4">
+                        <!-- Header Title -->
+                        <div class="card-header bg-light fw-bold fs-5">
+                           <i class="bi bi-activity me-2 text-warning"></i>Trends & Insights
+                        </div>
+                        <div class="card-body">
+                           <div class="row g-4">
+                              <!-- Hazard Reporting Trend -->
+                              <div class="col-md-8">
+                                 <h6 class="fw-bold">Hazard Reporting Trend (last 30 days)</h6>
+                                 <canvas id="trendsChart" style="height: 400px; width: 100%;"></canvas>
+                              </div>
+                              <!-- Spikes/Anomalies -->
+                              <div class="col-md-3">
+                                 <h6 class="fw-bold">Spikes/Anomalies (last 30 days)</h6>
+                                 <ul class="list-group" id="anomalies"></ul>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+
+                  </div>
+               </div>
+               <!-- END: Analytics Panel -->
+
+
+               <!--*******************************************************************************************************************-->
+               <!--*********************************************  4. Maintenance Panel  **********************************************-->
+               <!--*******************************************************************************************************************-->
+               <div id="panel-maintenance" class="content-panel d-none">
+                  <div class="container py-1">
+                     <!------------------>
+                     <!-- Panel Header -->
+                     <!------------------>
+                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-4 border-bottom">
+                        <div class="dashboard-header">Maintenance Dashboard</div>
+                        <span id="lastUpdated" class="text-muted fs-6"></span>
+                     </div>
+                     <!---------------->
+                     <!-- Panel Body -->
+                     <!---------------->
+                     <div class="card shadow-sm border-0 rounded-4 mb-4">
+                        <!------------------>
+                        <!-- Header Title -->
+                        <!------------------>
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                           <div>
+                              <i class="bi bi-gear-fill me-2"></i>Maintenance Tasks
+                           </div>
+                        </div><br>
+                        <!------------------------>
+                        <!-- Bootstrap Nav Tabs -->
+                        <!------------------------>
+                        <div class="card-body">
+                           <!----------------->
+                           <!-- Tab Headers -->
+                           <!----------------->
+                           <ul class="nav nav-tabs mb-3" id="maintenanceTab" role="tablist">
+                              <!-- Users Tab -->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link active" id="user-tab" data-bs-toggle="tab" data-bs-target="#userPanel" type="button" role="tab" aria-controls="userPanel" aria-selected="true">
+                                    Users
+                                 </button>
+                              </li>
+                              <!-- Road Hazard Class Tab -->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link" id="class-tab" data-bs-toggle="tab" data-bs-target="#classPanel" type="button" role="tab" aria-controls="classPanel" aria-selected="false">
+                                    Road Hazard Class
+                                 </button>
+                              </li>
+                              <!-- Road Hazard Type Tab -->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link" id="type-tab" data-bs-toggle="tab" data-bs-target="#typePanel" type="button" role="tab" aria-controls="typePanel" aria-selected="false">
+                                    Road Hazard Type
+                                 </button>
+                              </li>
+                           </ul>
+                           <!------------------>
+                           <!-- Tab Contents -->
+                           <!------------------>
+                           <div class="tab-content" id="maintenanceTabContent">
+                              <!-- Users Tab -->
+                              <div class="tab-pane fade show active" id="userPanel" role="tabpanel" aria-labelledby="user-tab">
+                                 <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0">Manage Users</h6>
+                                    <button class="btn btn-sm btn-success" id="addUserBtn"><i class="bi bi-person-plus"></i> Add User</button>
+                                 </div>
+                                 <div id="userTableDiv"></div>
+                              </div>
+                              <!-- Road Hazard Class Tab -->
+                              <div class="tab-pane fade" id="classPanel" role="tabpanel" aria-labelledby="class-tab">
+                                 <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0">Manage Road Hazard Classes</h6>
+                                    <button class="btn btn-sm btn-success" id="addClassBtn"><i class="bi bi-plus-circle"></i> Add Class</button>
+                                 </div>
+                                 <div id="classTableDiv"></div>
+                              </div>
+                              <!-- Road Hazard Type Tab -->
+                              <div class="tab-pane fade" id="typePanel" role="tabpanel" aria-labelledby="type-tab">
+                                 <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0">Manage Road Hazard Types</h6>
+                                    <button class="btn btn-sm btn-success" id="addTypeBtn"><i class="bi bi-plus-circle"></i> Add Type</button>
+                                 </div>
+                                 <div id="typeTableDiv"></div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+
+                  </div>
+               </div>
+
+               <!------------------------------->
+               <!-- User Modal (Add/Edit User)-->
+               <!------------------------------->
+               <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+                  <div class="modal-dialog">
+                     <form id="userForm" class="modal-content">
+                        <div class="modal-header">
+                           <h5 class="modal-title" id="userModalLabel">Add/Edit User</h5>
+                           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body row g-3">
+                           <input type="hidden" id="user_id" name="user_id">
+                           <div class="col-12">
+                              <label class="form-label">Username</label>
+                              <input required type="text" class="form-control" name="username" id="username">
+                           </div>
+                           <div class="col-12">
+                              <label class="form-label">Email</label>
+                              <input required type="email" class="form-control" name="email" id="email">
+                           </div>
+                           <div class="col-12">
+                              <label class="form-label">Phone</label>
+                              <input type="text" class="form-control" name="phone" id="phone">
+                           </div>
+                           <div class="col-12">
+                              <label class="form-label">Password <span class="text-muted small">(leave blank to keep unchanged)</span></label>
+                              <input type="password" class="form-control" name="password" id="password">
+                           </div>
+                           <div class="col-12">
+                              <label class="form-label">User Type</label>
+                              <select required class="form-select" name="user_type_id" id="user_type_id"></select>
+                           </div>
+                        </div>
+                        <div class="modal-footer">
+                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                           <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                     </form>
+                  </div>
+               </div>
+
+               <!---------------------------------------------->
+               <!-- Class Modal (Add/Edit Road Hazard Class) -->
+               <!---------------------------------------------->
+               <div class="modal fade" id="classModal" tabindex="-1" aria-labelledby="classModalLabel" aria-hidden="true">
+                  <div class="modal-dialog">
+                     <form id="classForm" class="modal-content">
+                        <div class="modal-header">
+                           <h5 class="modal-title" id="classModalLabel">Add/Edit Road Hazard Class</h5>
+                           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body row g-3">
+                           <input type="hidden" id="class_id" name="class_id">
+                           <div class="col-12">
+                              <label class="form-label">Class Name</label>
+                              <input required type="text" class="form-control" name="class_name" id="class_name">
+                           </div>
+                           <div class="col-12">
+                              <label class="form-label">Description</label>
+                              <textarea class="form-control" name="class_desc" id="class_desc"></textarea>
+                           </div>
+                        </div>
+                        <div class="modal-footer">
+                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                           <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                     </form>
+                  </div>
+               </div>
+
+               <!-------------------------------------------->
+               <!-- Type Modal (Add/Edit Road Hazard Type) -->
+               <!-------------------------------------------->
+               <div class="modal fade" id="typeModal" tabindex="-1" aria-labelledby="typeModalLabel" aria-hidden="true">
+                  <div class="modal-dialog">
+                     <form id="typeForm" class="modal-content">
+                        <div class="modal-header">
+                           <h5 class="modal-title" id="typeModalLabel">Add/Edit Road Hazard Type</h5>
+                           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body row g-3">
+                           <input type="hidden" id="hazard_id" name="hazard_id">
+                           <div class="col-12">
+                              <label class="form-label">Hazard Name</label>
+                              <input required type="text" class="form-control" name="hazard_name" id="hazard_name">
+                           </div>
+                           <div class="col-12">
+                              <label class="form-label">Description</label>
+                              <textarea class="form-control" name="hazard_desc" id="hazard_desc"></textarea>
+                           </div>
+                           <div class="col-12">
+                              <label class="form-label">Hazard Class</label>
+                              <select required class="form-select" name="class_id" id="hazard_class_id"></select>
+                           </div>
+                        </div>
+                        <div class="modal-footer">
+                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                           <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                     </form>
+                  </div>
+               </div>
+               <!-- END: Maintenance Panel -->
+
+
+               <!--*******************************************************************************************************************-->
+               <!--***********************************************  5. Reports Panel  ************************************************-->
+               <!--*******************************************************************************************************************-->
+               <div id="panel-reports" class="content-panel d-none">
+                  <div class="container py-1">
+                     <!------------------>
+                     <!-- Panel Header -->
+                     <!------------------>
+                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-4 border-bottom">
+                        <div class="dashboard-header">Reports Dashboard</div>
+                        <span id="lastUpdated" class="text-muted fs-6"></span>
+                     </div>
+                     <!---------------->
+                     <!-- Panel Body -->
+                     <!---------------->
+                     <!--<div class="card shadow-sm mb-3">-->
+                     <div class="card shadow-sm border-0 rounded-4 mb-4">
+                        <!------------------>
+                        <!-- Header Title -->
+                        <!------------------>
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                           <div>
+                              <i class="bi-file-earmark-text me-2"></i>Reports
+                           </div>
+                        </div><br>
+                        <!------------------------>
+                        <!-- Bootstrap Nav Tabs -->
+                        <!------------------------>
+                        <div class="card-body">
+                           <!----------------->
+                           <!-- Tab Headers -->
+                           <!----------------->
+                           <ul class="nav nav-tabs mb-3" id="reportTabs" role="tablist">
+                              <!-- Weekly Hazard Report Tab -->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#weeklyReportTab" type="button" role="tab" aria-controls="weeklyReportTab" aria-selected="true">
+                                    Weekly Hazard Report
+                                 </button>
+                              </li>
+                              <!-- Monthly Hazard Report Tab -->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#monthlyReportTab" type="button" role="tab" aria-controls="monthlyReportTab" aria-selected="false">
+                                    Monthly Hazard Report
+                                 </button>
+                              </li>
+                              <!-- Unresolved/Open Hazards Tab -->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#unresolvedTab" type="button" role="tab" aria-controls="unresolvedTab" aria-selected="false">
+                                    Unresolved/Open Hazards
+                                 </button>
+                              </li>
+                              <!-- Resolution Rate by Type Tab -->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#resolutionTab" type="button" role="tab" aria-controls="resolutionTab" aria-selected="false">
+                                    Resolution Rate by Type
+                                 </button>
+                              </li>
+                              <!-- Resolved/Rejected Reports Tab -->
+                              <li class="nav-item" role="presentation">
+                                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#resolvedRejectedTab" type="button" role="tab" aria-controls="resolvedRejectedTab" aria-selected="false">
+                                    Resolved/Rejected Reports
+                                 </button>
+                              </li>
+                           </ul>
+                        <!--
+                        <div class="card-header bg-light d-flex">
+                           <ul class="nav nav-tabs card-header-tabs flex-grow-1" id="reportTabs" role="tablist">
+                              ok<li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#weeklyReportTab" type="button" role="tab">Weekly Hazard Report</button></li>
+                              ok<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#monthlyReportTab" type="button" role="tab">Monthly Hazard Report</button></li>
+                              ok<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#unresolvedTab" type="button" role="tab">Unresolved/Open Hazards</button></li>
+                              ok<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#resolutionTab" type="button" role="tab">Resolution Rate by Type</button></li>
+                              ok<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#resolvedRejectedTab" type="button" role="tab">Resolved/Rejected Reports</button></li>
+                           </ul>
+                        </div>
+                        -->
+                           <!------------------>
+                           <!-- Tab Contents -->
+                           <!------------------>
+                           <div class="tab-content" id="reportsTabContent">
+                              <!-- 1. Weekly Hazard Report -->
+                              <!--<div class="tab-pane fade show active" id="userPanel" role="tabpanel" aria-labelledby="user-tab">-->
+                              <div class="tab-pane fade show active" id="weeklyReportTab" role="tabpanel">
+                                 <div class="d-flex justify-content-end mb-2">
+                                    <button class="btn btn-outline-primary export-btn" id="exportWeekly"><i class="bi bi-download me-1"></i>Export</button>
+                                 </div>
+                                 <div id="weeklyReportTable"></div>
+                              </div>
+                              <!--2. Monthly Hazard Report -->
+                              <!--<div class="tab-pane fade show active" id="userPanel" role="tabpanel" aria-labelledby="user-tab">-->
+                              <div class="tab-pane fade" id="monthlyReportTab" role="tabpanel">
+                                 <div class="d-flex justify-content-end mb-2">
+                                    <button class="btn btn-outline-primary export-btn" id="exportMonthly"><i class="bi bi-download me-1"></i>Export</button>
+                                 </div>
+                                 <div id="monthlyReportTable"></div>
+                              </div>
+                              <!-- 3. Unresolved/Open Hazards -->
+                              <!--<div class="tab-pane fade show active" id="userPanel" role="tabpanel" aria-labelledby="user-tab">-->
+                              <div class="tab-pane fade" id="unresolvedTab" role="tabpanel">
+                                 <div class="d-flex justify-content-end mb-2">
+                                    <button class="btn btn-outline-primary export-btn" id="exportUnresolved"><i class="bi bi-download me-1"></i>Export</button>
+                                 </div>
+                                 <div id="unresolvedTable"></div>
+                              </div>
+                              <!-- 4. Resolution Rate by Hazard Type -->
+                              <!--<div class="tab-pane fade show active" id="userPanel" role="tabpanel" aria-labelledby="user-tab">-->
+                              <div class="tab-pane fade" id="resolutionTab" role="tabpanel">
+                                 <div class="d-flex justify-content-end mb-2">
+                                    <button class="btn btn-outline-primary export-btn" id="exportResolution"><i class="bi bi-download me-1"></i>Export</button>
+                                 </div>
+                                 <div id="resolutionTable"></div>
+                              </div>
+                              <!-- 5. Resolved/Rejected Reports -->
+                              <!--<div class="tab-pane fade show active" id="userPanel" role="tabpanel" aria-labelledby="user-tab">-->
+                              <div class="tab-pane fade" id="resolvedRejectedTab" role="tabpanel">
+                                 <div class="d-flex justify-content-end mb-2">
+                                    <button class="btn btn-outline-primary export-btn" id="exportResolvedRejected"><i class="bi bi-download me-1"></i>Export</button>
+                                 </div>
+                                 <div id="resolvedRejectedTable"></div>
+                              </div>
+                        <!--here-->
+                        <!--here-->
+                           </div>
+                        </div>
+                     </div>
+
+                  </div>
+               </div>
+               <!-- END: Reports Panel -->
+
+
+      <!-- *************************************************************************************************************************** -->
+      <!-- ****************************************************  JavaScript Code  **************************************************** -->
+      <!-- *************************************************************************************************************************** -->
+
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <!-- *************************************************  Sidebar Menu Handler  ************************************************** -->
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <script>
+         //document.addEventListener('DOMContentLoaded', function () {
+         document.addEventListener('DOMContentLoaded', async () => {
+            const myCooky = parseCookies();
+            const RADIUS = parseFloat(myCooky.RADIUS_KM) || 0;
+            const span = document.getElementById('radiusValue');
+            if (span) span.textContent = RADIUS;
+            //const params = new URLSearchParams(window.location.search);
+            const user = await getSessionUser();
+            document.getElementById('usernameLabel').textContent = user.username;
+            document.getElementById('headerSignOut').onclick = e => {
+               e.preventDefault();
+               window.location.href = '/logout';
+            };
+            
+            /*
+            if (!user) {
+               window.location.href = '/index.html';
+               return;
+            }
+
+            const userInfo = document.getElementById('userInfo');
+            console.log(user.username);
+            if (userInfo && user.username) {
+               userInfo.innerHTML = `
+                  <i class="bi bi-person-circle me-2" style="font-size: 1.2rem;"></i><span>${user.username}</span>
+               `;
+            }
+            */
+            
+            // Sidebar menu options by role
+            const Menus = {
+               1: [ // Admin
+                     { content: "hazard-reporting", icon: "bi-flag", text: "Hazard Reporting" },
+                     { content: "hazard-moderation", icon: "bi-shield-exclamation", text: "Hazard Moderation" },
+                     { content: "analytics", icon: "bi-graph-up", text: "Analytics" },
+                     { content: "maintenance", icon: "bi-gear", text: "Maintenance" },
+                     { content: "reports", icon: "bi-file-earmark-bar-graph", text: "Reports" },
+                     { content: "signout", icon: "bi-box-arrow-right", text: "Sign out", href: "/logout" }
+                  ],
+               2: [ // Admin support
+                     { content: "hazard-moderation", icon: "bi-shield-exclamation", text: "Hazard Moderation" },
+                     { content: "analytics", icon: "bi-graph-up", text: "Analytics" },
+                     { content: "maintenance", icon: "bi-gear", text: "Maintenance" },
+                     { content: "reports", icon: "bi-file-earmark-bar-graph", text: "Reports" },
+                     { content: "signout", icon: "bi-box-arrow-right", text: "Sign out", href: "/logout" }
+                  ],
+               3: [ // General user
+                     { content: "hazard-reporting", icon: "bi-flag", text: "Hazard Reporting" },
+                     { content: "reports", icon: "bi-file-earmark-bar-graph", text: "Reports" },
+                     { content: "signout", icon: "bi-box-arrow-right", text: "Sign out", href: "/logout" }
+                  ]
+            };
+
+            // Get menu options depending on user_type_id (default is general user menu options)
+            //const roleMenus = Menus[window.user_type_id] || Menus[3];
+            const roleMenus = Menus[user.user_type_id] || Menus[3];
+            
+            // Render the sidebar menu
+            const menuList = document.getElementById('menuList');
+            menuList.innerHTML = "";
+            roleMenus.forEach((item, idx) => {
+               let li = document.createElement('li');
+               li.className = "nav-item";
+               let active = idx === 0 ? "active" : "";
+               let href = item.href || "#";
+               li.innerHTML = `<a href="${href}" class="nav-link ${active}" data-content="${item.content}">
+                     <i class="bi ${item.icon}"></i>${item.text}
+               </a>`;
+               menuList.appendChild(li);
+            });
+
+            // Utility to show panel and run functions
+            function activateMenu(content) {
+               document.querySelectorAll('#menuList .nav-link').forEach(nav => nav.classList.remove('active'));
+               document.querySelectorAll('.content-panel').forEach(panel => panel.classList.add('d-none'));
+               const menuItem = document.querySelector(`#menuList .nav-link[data-content="${content}"]`);
+               if (menuItem) menuItem.classList.add('active');
+               const panel = document.getElementById('panel-' + content);
+               if (panel) panel.classList.remove('d-none');
+            }
+
+            // Activate the first menu item and load relevant data
+            const firstContent = roleMenus[0].content;
+            if (firstContent === "hazard-reporting") {
+               activateMenu('hazard-reporting');
+               getUserLocation(pos => {
+                     loadHazards(pos.coords.latitude, pos.coords.longitude);
+               });
+            } else if (firstContent === "hazard-moderation") {
+               activateMenu('hazard-moderation');
+               loadPending();
+            }
+            
+            document.querySelectorAll('#menuList .nav-link').forEach(link => {
+               link.addEventListener('click', function (e) {
+                     // Allow logout link to work normally
+                     if (this.getAttribute('data-content') === "signout") return;
+                     e.preventDefault();
+                     const content = this.getAttribute('data-content');
+                     activateMenu(content);
+
+                     if (content === 'hazard-reporting') {
+                        getUserLocation(pos => {
+                           loadHazards(pos.coords.latitude, pos.coords.longitude);
+                        });
+                     }
+                     if (content === 'hazard-moderation') {
+                        //document.getElementById('sortHazards').value = 'flags';
+                        loadPending();
+                     }
+                     if (content === 'analytics') {
+                        renderAnalytics();
+                     }
+                     if (content === 'maintenance') {
+                        loadWeeklyReport();
+                     }                     
+                     if (content === 'reports') {
+                        loadWeeklyReport();
+                     }
+               });
+            });
+
+         });
+
+         async function getSessionUser() {
+            try {
+               const res = await fetch('/api/session-user', {
+                  method: 'GET',
+                  credentials: 'same-origin'
+               });
+               if (!res.ok) {
+                  // Not logged in or session expired
+                  return null;
+               }
+               const data = await res.json();
+               return data;
+            } catch (err) {
+               console.error('Error fetching session user:', err);
+               return null;
+            }
+         }
+
+      // End: Sidebar Menu Handler
+      </script>
+
+
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <!-- *******************************************  Hazard Reporting Functionality  ********************************************** -->
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <script>
+         const socket = io();
+
+         // Used for testing hard-coded latitude/longitude & hazard proximity (RADIUS)
+         // Set userLat & userLong to NULL when NOT testing hard-coded latitude/longitude
+         const userLat  = null;
+         const userLong = null;
+         // Yoobee College CBD Location
+         // const userLat  = -36.857042;
+         // const userLong = 174.764401;
+         // CIC North Shore Location
+         // const userLat  = -36.721903;
+         // const userLong = 174.723245;
+         // Beeston Crescent Location
+         // const userLat  = -37.026610;
+         // const userLong = 174.885707;
+         
+         // react to real-time updates
+         socket.on('vote-updated', ({ hazard_id, vote_count }) => {
+            const badge = document.getElementById(`vote-badge-${hazard_id}`);
+            if (badge) badge.textContent = vote_count;
+         });
+         socket.on('status-updated', ({ hazard_id, hazard_status }) => {
+            const el = document.getElementById(`hazard_status_${hazard_id}`);
+            if (el) {el.textContent = hazard_status;}
+         });
+         socket.on('flag-updated', ({ hazard_id }) => {
+            const card = document.getElementById(`card-${hazard_id}`);
+            if (card) card.classList.add('flagged');
+         });
+         socket.on('hazard-approved', ({ hazard_id }) => {
+            const card = document.getElementById(`card-${hazard_id}`);
+            if (card) card.remove();
+         });
+         socket.on('hazard-rejected', ({ hazard_id }) => {
+            const card = document.getElementById(`card-${hazard_id}`);
+            if (card) card.remove();
+         });
+
+         // helper to parse cookies into an object
+         function parseCookies() {
+            return document.cookie
+               .split('; ')
+               .reduce((acc, pair) => {
+                  const [k, v] = pair.split('=');
+                  acc[k] = v;
+                  return acc;
+               }, {});
+         }
+
+         // used for testing hard-coded latitude/longitude
+         function getUserLocation(callback) {
+            if (userLat != null && userLong != null) {
+               console.log ("HERE!1!2!3!")
+               // use override
+               return callback({ coords: { latitude: userLat, longitude: userLong }});
+            }
+            // get browser geolocation
+            if (navigator.geolocation) {
+               navigator.geolocation.getCurrentPosition(pos => {
+                  document.getElementById('latitude').value  = pos.coords.latitude;
+                  document.getElementById('longitude').value = pos.coords.longitude;
+                  loadHazards(pos.coords.latitude, pos.coords.longitude);
+               }, () => {
+                  loadAllHazards();
+               });
+            } else {
+               // if no geolocation support, load all hazards
+               loadAllHazards();
+            }
+         }
+
+         async function geocodeAddress(address) {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+            const response = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+            const data = await response.json();
+            if (data && data.length > 0) {
+               return {
+                  lat: parseFloat(data[0].lat),
+                  lon: parseFloat(data[0].lon)
+               };
+            }
+            return null;
+         }
+
+         async function loadHazards(lat, lng) {
+            try {
+               const res = await fetch('/fetch/hazards', {
+                  method: 'POST',
+                  credentials: 'same-origin',
+                  headers: {'Content-Type':'application/json'},
+                  body: JSON.stringify({ lat, lng })
+               });
+               if (!res.ok) throw new Error(await res.text());
+               //const list = await res.json();
+               //renderGrid(list);
+               renderGrid(await res.json());
+
+            } catch {
+               loadAllHazards();
+            }
+         }
+
+         async function loadAllHazards() {
+            // const res = await fetch('/fetch/allhazards');
+            const res = await fetch('/fetch/allhazards', { credentials: 'same-origin' });
+            if (!res.ok) {
+               console.error('Error fetching all hazards', res.statusText);
+               return;
+            }
+            renderGrid(await res.json());
+         }
+
+         function renderGrid(list) {
+            const grid = document.getElementById('hazardGrid');
+            grid.innerHTML = '';
+            list.forEach(h => {
+               const card = document.createElement('div');
+               card.id = `card-${h.hazard_id}`;
+               card.className = 'hazard-card';
+               card.innerHTML = `
+                  <img src="${h.hazard_image}" alt="photo">
+                  <p><strong>Hazard Type:</strong> ${h.hazard_name}</p>
+                  <p><strong>Hazard Desc:</strong> ${h.hazard_desc}</p>
+                  <p>
+                     <strong>Hazard Status:</strong>
+                     <span id="hazard_status_${h.hazard_id}">${h.status_name}</span>
+                  </p>
+                  <p><strong>Severity:</strong> ${h.severity_name}</p>
+                  ${h.distance != null
+                     ? `<p><strong>Distance:</strong> ${h.distance.toFixed(2)} km away</p><br>`
+                     : ''}
+                  <button
+                     data-id="${h.hazard_id}"
+                     class="btn btn-sm btn-outline-success upvote-btn">Upvote
+                     <span id="vote-badge-${h.hazard_id}" class="badge bg-success">${h.vote_count || 0}</span>
+                  </button>
+                  <button data-id="${h.hazard_id}"
+                     class="btn btn-sm btn-outline-warning flag-btn">Flag
+                     <span id="flag-badge-${h.hazard_id}" class="badge bg-success">${h.flag_count || 0}</span>
+                  </button>
+                  <small class="text-muted d-block mt-2">
+                     Reported: ${new Date(h.created_at).toLocaleString()}
+                  </small>
+               `;
+               grid.appendChild(card);
+            });
+
+            // Road hazard report submission handler
+            document.getElementById('hazardForm').addEventListener('submit', async e => {
+               e.preventDefault();
+               if (!confirm('Confirm submission?')) {
+                  // User clicked Cancel/No
+                  e.preventDefault();
+                  return;
+               }
+
+               // Check if latitude/longitude is empty (geolocation failed)
+               const latInput = document.getElementById('latitude');
+               const lonInput = document.getElementById('longitude');
+               let latitude = latInput.value;
+               let longitude = lonInput.value;
+
+               // If latitude/longitude are not set, try geocoding the address
+               if (!latitude || !longitude || isNaN(Number(latitude)) || isNaN(Number(longitude))) {
+                  const address = document.getElementById('hazardPlace').value.trim();
+                  if (!address) {
+                     alert('Please enter a valid place name or enable location services.');
+                     return;
+                  }
+                  const coords = await geocodeAddress(address);
+                  if (!coords) {
+                     alert('Unable to find coordinates for that address. Please try a different place name.');
+                     return;
+                  }
+                  latitude = coords.lat;
+                  longitude = coords.lon;
+                  latInput.value = latitude;
+                  lonInput.value = longitude;
+               }
+               
+               // For debugging: show what you're about to submit
+               console.log('Submitting lat/lon:', latitude, longitude);
+
+               const data = new FormData(e.target);
+               try {
+                  const res = await fetch('/report-hazard', {
+                     method: 'POST',
+                     body: data
+                  });
+                  if (res.ok) {
+                     e.target.reset();
+                     const lat = document.getElementById('latitude').value;
+                     const lng = document.getElementById('longitude').value;
+                     loadHazards(lat, lng);
+                  } else {
+                     const text = await res.text();
+                     console.error('POST /report-hazard failed', res.status, text);
+                     alert(`Error ${res.status}: ${text}`);
+                  }
+               } catch (err) {
+                  console.error('Network error:', err);
+                  alert('Network error: ' + err.message);
+               }
+            });
+
+
+            // Up-vote button handler
+            document.querySelectorAll('.upvote-btn').forEach(btn => {
+               btn.onclick = async () => {
+                  const hazardId = btn.dataset.id;
+                  try {
+                     const res = await fetch('/upvote-hazard', {
+                        method: 'POST',
+                        credentials: 'same-origin',                        // include session cookie
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hazard_id: hazardId })
+                     });
+
+                     if (res.status === 403 || !res.ok) {
+                        // “no self-voting” or other forbidden message
+                        const msg = await res.text();
+                        return alert(`Error ${res.status}: ${msg}`);
+                     }
+
+                     // success: update the badge with the new vote count
+                     const { vote_count } = await res.json();
+                     document.getElementById(`vote-badge-${hazardId}`).textContent = vote_count;
+                  } catch (err) {
+                     console.error('Network or parsing error:', err);
+                     alert('Could not submit vote. Please try again.');
+                  }
+               };
+            });
+
+            // Flag button handler
+            document.querySelectorAll('.flag-btn').forEach(btn => {
+               btn.onclick = async () => {
+                  const hazardId = btn.dataset.id;
+                  const reason = prompt('Why are you flagging this report? (optional)');
+                  const res = await fetch('/flag-hazard', {
+                     method: 'POST',
+                     credentials: 'same-origin',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ hazard_id: hazardId, reason })
+                  });
+                  if (res.ok) {
+                     btn.disabled = true;
+                     btn.textContent = 'Flagged';
+                  } else {
+                     const text = await res.text();
+                     alert(`Error ${res.status}: ${text}`);
+                  }
+               };
+            });
+         }   // end of function renderGrid(list)
+
+         // Road hazards mapping handler
+         document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('viewAllMapReporting').addEventListener('click', () => {
+               window.open('/map.html', '_blank');
+            });
+            
+         });
+
+      // End: Hazard Reporting Functionality
+      </script>
+
+
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <!-- *********************************************  Hazard Moderation Functionality  ******************************************* -->
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <script>
+         //async function loadPending() {
+         async function loadPending(sort = document.getElementById('sortHazards').value) {
+            document.getElementById('statusMsg').textContent = 'Loading all hazards...';
+            try {
+               //const res = await fetch('/admin/load-hazards', { credentials: 'same-origin' });
+               const res = await fetch(`/admin/load-hazards?sort=${sort}`, { credentials: 'same-origin' });
+               if (!res.ok) throw new Error(res.statusText);
+               const list = await res.json();
+               renderAdminGrid(list);
+               document.getElementById('statusMsg').textContent = list.length ? '' : 'No hazards to loaded...';
+            } catch (err) {
+               console.error(err);
+               document.getElementById('statusMsg').textContent = 'Insufficient privileges...';
+            }
+         }
+
+         function renderAdminGrid(list) {
+            const grid = document.getElementById('adminGridModeration');
+            grid.innerHTML = '';
+            list.forEach(h => {
+               const card = document.createElement('div');
+               card.className = 'card shadow-sm mb-3';
+               card.id = `card-${h.hazard_id}`;
+               card.innerHTML = `
+                  <img src="${h.hazard_image}" class="card-img-top" alt="hazard">
+                  <div class="card-body">
+                     <p><strong>Hazard Type:</strong> ${h.hazard_name}</p>
+                     <p><strong>Hazard Desc:</strong> ${h.hazard_desc}</p>
+                     <p>
+                        <strong>Hazard Status:</strong>
+                        <span id="hazard_status_${h.hazard_id}">${h.status_name}</span>
+                     </p>
+                     <p><strong>Severity:</strong> ${h.severity_name}</p>
+                     <small class="text-muted d-block mt-2">
+                        Reported: ${new Date(h.created_at).toLocaleString()}
+                     </small><br>
+                     <p>
+                        <span class="badge bg-success">Upvotes: ${h.vote_count}</span>
+                        <span class="badge bg-danger ms-2">Flags: ${h.flag_count}</span>
+                     </p>
+                     <button class="btn btn-sm btn-outline-primary approve-btn" data-id="${h.hazard_id}">Approve</button>
+                     <button class="btn btn-sm btn-outline-danger ms-2 reject-btn" data-id="${h.hazard_id}">Reject</button>
+                  </div>
+               `;
+               grid.appendChild(card);
+            });
+            bindApprovalButtons();
+         }
+
+         function bindApprovalButtons() {
+            document.querySelectorAll('.approve-btn').forEach(btn => {
+               btn.onclick = async () => {
+                  const id = btn.dataset.id;
+                  // Allow empty comment for approval, but required for rejection
+                  let comment = prompt('Please enter reason/comment for approval (optional):');
+                  await fetch('/admin/approve-hazard', {
+                     method: 'POST',
+                     credentials: 'same-origin',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ hazard_id: id, comment })
+                  });
+               };
+            });
+            document.querySelectorAll('.reject-btn').forEach(btn => {
+               btn.onclick = async () => {
+                  const id = btn.dataset.id;
+                  let comment = prompt('Please enter reason for rejection:');
+                  if (comment === null) return;
+                  comment = comment.trim();
+                  if (!comment) {
+                     alert('You must provide a reason for rejection.');
+                     return;
+                  }
+                  await fetch('/admin/reject-hazard', {
+                     method: 'POST',
+                     credentials: 'same-origin',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ hazard_id: id, comment })
+                  });
+               };
+            });
+            document.getElementById('viewAllMapModeration').onclick = () => window.open('/map.html', '_blank');
+         }
+         /*
+         function bindApprovalButtons() {
+            document.querySelectorAll('.approve-btn').forEach(btn => {
+               btn.onclick = async () => {
+                  const id = btn.dataset.id;
+                  await fetch('/admin/approve-hazard', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hazard_id: id }) });
+               };
+            });
+            document.querySelectorAll('.reject-btn').forEach(btn => {
+               btn.onclick = async () => {
+                  const id = btn.dataset.id;
+                  await fetch('/admin/reject-hazard', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hazard_id: id }) });
+               };
+            });
+            document.getElementById('viewAllMapModeration').onclick = () => window.open('/map.html', '_blank');
+         }
+         */
+         
+         document.addEventListener('DOMContentLoaded', () => {
+            const sortSelect = document.getElementById('sortHazards');
+            if (sortSelect) {
+               sortSelect.addEventListener('change', function () {
+                  loadPending(this.value);
+               });
+            }
+            //loadPending();
+         });
+      
+         // End: Hazard Moderation Functionality
+      </script>
+
+
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <!-- **********************************************  Analytics Functionality  ************************************************** -->
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <script>
+         let hazardsByTypeChart = null;
+         let hazardsBySeverityChart = null;
+         let hazardsByStatusChart = null;
+         let hazardsByTrendChart = null;
+         let hazardMapInstance = null;
+         
+         async function renderAnalytics() {
+            // Destroy existing chart instances if they exist
+            if (hazardsByTypeChart) hazardsByTypeChart.destroy();
+            if (hazardsBySeverityChart) hazardsBySeverityChart.destroy();
+            if (hazardsByStatusChart) hazardsByStatusChart.destroy();
+            if (hazardsByTrendChart) hazardsByTrendChart.destroy();
+            if (hazardMapInstance) {
+               hazardMapInstance.remove();
+               hazardMapInstance = null;
+            }
+            // --- Overview ---
+            const res = await fetch('/api/analytics', { credentials: 'same-origin' });
+            const data = await res.json();
+            document.getElementById('totalHazards').textContent = data.overview.total ?? 0;
+            document.getElementById('hazards7').textContent = data.overview.last7 ?? 0;
+            document.getElementById('hazards30').textContent = data.overview.last30 ?? 0;
+            document.getElementById('avgDaily').textContent = data.overview.avgDaily ?? 0;
+            document.getElementById('avgResolution').textContent = data.overview.avgRows ?? 0;
+
+            // --- Hazard Classification Analytics ---
+            hazardsByTypeChart = new Chart(document.getElementById('hazardsByType'), {
+               type: 'bar',
+               data: {
+                  labels: data.type.labels,
+                  datasets: [{ label: "Hazards", data: data.type.counts }]
+               }
+            });
+
+            hazardsBySeverityChart = new Chart(document.getElementById('hazardsBySeverity'), {
+               type: 'pie',
+               data: {
+                  labels: data.severity.labels,
+                  datasets: [{ data: data.severity.counts }]
+               }
+            });
+
+            hazardsByStatusChart = new Chart(document.getElementById('hazardsByStatus'), {
+               type: 'doughnut',
+               data: {
+                  labels: data.status.labels,
+                  datasets: [{ data: data.status.counts }]
+               }
+            });
+
+   
+            // --- Location-Based Analytics ---
+            hazardMapInstance = L.map('hazardMap').setView([data.map.centerLat, data.map.centerLng], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(hazardMapInstance);
+
+            data.map.points.forEach(p => {
+               L.circle([p.lat, p.lng], { radius: 80, color: '#e53e3e', fillOpacity: 0.3 }).addTo(hazardMapInstance);
+            });
+   
+            const topLoc = document.getElementById('topLocations');
+            topLoc.innerHTML = '';
+            data.topLocations.forEach(loc => {
+               const li = document.createElement('li');
+               li.className = 'list-group-item';
+               li.textContent = `(${loc.lat.toFixed(3)}, ${loc.lng.toFixed(3)}): ${loc.count} hazards`;
+               topLoc.appendChild(li);
+            });
+
+
+            // --- User Engagement Analytics ---
+            const topVoted = document.getElementById('topVoted');
+            topVoted.innerHTML = '';
+            data.topVoted.forEach(h => {
+               const li = document.createElement('li');
+               li.className = 'list-group-item';
+               li.textContent = `${h.hazard_desc} (Votes: ${h.vote_count})`;
+               topVoted.appendChild(li);
+            });
+
+            const topFlagged = document.getElementById('topFlagged');
+            topFlagged.innerHTML = '';
+            data.topFlagged.forEach(h => {
+               const li = document.createElement('li');
+               li.className = 'list-group-item';
+               li.textContent = `${h.hazard_desc} (Flags: ${h.flag_count})`;
+               topFlagged.appendChild(li);
+            });
+
+            const topUsers = document.getElementById('topUsers');
+            topUsers.innerHTML = '';
+            data.topUsers.forEach(u => {
+               const li = document.createElement('li');
+               li.className = 'list-group-item';
+               li.textContent = `${u.username} (${u.report_count} reports)`;
+               topUsers.appendChild(li);
+            });
+
+
+            // --- Trends & Insights ---
+            hazardsByTrendChart = new Chart(document.getElementById('trendsChart'), {
+               type: 'line',
+               data: {
+                  labels: data.trends.labels,
+                  datasets: [{
+                  label: 'Hazards/day',
+                  data: data.trends.counts,
+                  fill: true,
+                  tension: 0.3
+                  }]
+               }
+            });
+
+            // Spikes/Anomalies (days with > X% above average)
+            const anomalies = document.getElementById('anomalies');
+            anomalies.innerHTML = '';
+            data.trends.anomalies.forEach(a => {
+               const li = document.createElement('li');
+               li.className = 'list-group-item list-group-item-warning';
+               li.textContent = `${a.date}: ${a.count} hazards`;
+               anomalies.appendChild(li);
+            });
+         }
+
+      // End: Analytics Functionality
+      </script>
+
+
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <!-- *************************************************  Maintenance Functionality  ********************************************* -->
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <script>
+         //--- Utility to populate dropdowns ---
+         async function populateDropdown(endpoint, dropdownId, textProp, valueProp) {
+            const res = await fetch(endpoint);
+            const list = await res.json();
+            const select = document.getElementById(dropdownId);
+            select.innerHTML = '';
+            list.forEach(item => {
+               const opt = document.createElement('option');
+               opt.value = item[valueProp];
+               opt.textContent = item[textProp];
+               select.appendChild(opt);
+            });
+         }
+
+         //--- Load Users Table ---
+         async function loadUsers() {
+            const res = await fetch('/api/users');
+            const users = await res.json();
+            const res2 = await fetch('/api/user-types');
+            const userTypes = await res2.json();
+            const typeMap = Object.fromEntries(userTypes.map(t => [t.user_type_id, t.user_type_name]));
+            let html = `<table class="table table-sm table-hover align-middle"><thead>
+               <tr><th>ID</th><th>Username</th><th>Email</th><th>Phone</th><th>Type</th><th>Actions</th></tr></thead><tbody>`;
+            users.forEach(u => {
+               html += `<tr>
+                  <td>${u.user_id}</td>
+                  <td>${u.username}</td>
+                  <td>${u.email1}</td>
+                  <td>${u.phone1 || ''}</td>
+                  <td>${typeMap[u.user_type_id]}</td>
+                  <td>
+                  <button class="btn btn-sm btn-primary me-1" onclick="editUser(${u.user_id})"><i class="bi bi-pencil"></i></button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.user_id})"><i class="bi bi-trash"></i></button>
+                  </td>
+               </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('userTableDiv').innerHTML = html;
+         }
+         window.loadUsers = loadUsers;
+
+         //--- Load Hazard Classes Table ---
+         async function loadClasses() {
+            const res = await fetch('/api/classes');
+            const classes = await res.json();
+            let html = `<table class="table table-sm table-hover align-middle"><thead>
+               <tr><th>ID</th><th>Name</th><th>Description</th><th>Actions</th></tr></thead><tbody>`;
+            classes.forEach(c => {
+               html += `<tr>
+                  <td>${c.class_id}</td>
+                  <td>${c.class_name}</td>
+                  <td>${c.class_desc || ''}</td>
+                  <td>
+                  <button class="btn btn-sm btn-primary me-1" onclick="editClass(${c.class_id})"><i class="bi bi-pencil"></i></button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteClass(${c.class_id})"><i class="bi bi-trash"></i></button>
+                  </td>
+               </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('classTableDiv').innerHTML = html;
+         }
+         window.loadClasses = loadClasses;
+
+         //--- Load Hazard Types Table ---
+         async function loadTypes() {
+            const res = await fetch('/api/types');
+            const types = await res.json();
+            const res2 = await fetch('/api/classes');
+            const classes = await res2.json();
+            const classMap = Object.fromEntries(classes.map(c => [c.class_id, c.class_name]));
+            let html = `<table class="table table-sm table-hover align-middle"><thead>
+               <tr><th>ID</th><th>Name</th><th>Description</th><th>Class</th><th>Actions</th></tr></thead><tbody>`;
+            types.forEach(t => {
+               html += `<tr>
+                  <td>${t.hazard_id}</td>
+                  <td>${t.hazard_name}</td>
+                  <td>${t.hazard_desc || ''}</td>
+                  <td>${classMap[t.class_id]}</td>
+                  <td>
+                  <button class="btn btn-sm btn-primary me-1" onclick="editType(${t.hazard_id})"><i class="bi bi-pencil"></i></button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteType(${t.hazard_id})"><i class="bi bi-trash"></i></button>
+                  </td>
+               </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('typeTableDiv').innerHTML = html;
+         }
+         window.loadTypes = loadTypes;
+
+         document.addEventListener('DOMContentLoaded', () => {
+            // Load data on click
+            document.getElementById('user-tab').addEventListener('shown.bs.tab', loadUsers);
+            document.getElementById('class-tab').addEventListener('shown.bs.tab', loadClasses);
+            document.getElementById('type-tab').addEventListener('shown.bs.tab', loadTypes);
+            // Default load users tab
+            loadUsers();
+
+            // --- Add Buttons Handler ---
+            document.getElementById('addUserBtn').onclick = () => {
+               populateDropdown('/api/user-types', 'user_type_id', 'user_type_name', 'user_type_id');
+               document.getElementById('userForm').reset();
+               document.getElementById('user_id').value = '';
+               new bootstrap.Modal(document.getElementById('userModal')).show();
+            };
+
+            document.getElementById('addClassBtn').onclick = () => {
+               document.getElementById('classForm').reset();
+               document.getElementById('class_id').value = '';
+               new bootstrap.Modal(document.getElementById('classModal')).show();
+            };
+
+            document.getElementById('addTypeBtn').onclick = async () => {
+               await populateDropdown('/api/classes', 'hazard_class_id', 'class_name', 'class_id');
+               document.getElementById('typeForm').reset();
+               document.getElementById('hazard_id').value = '';
+               new bootstrap.Modal(document.getElementById('typeModal')).show();
+            };
+
+            // --- Form Submission Handler ---
+            document.getElementById('userForm').onsubmit = async e => {
+               e.preventDefault();
+               const id = document.getElementById('user_id').value;
+               const data = Object.fromEntries(new FormData(e.target));
+               const method = id ? 'PUT' : 'POST';
+               const url = id ? `/api/users/${id}` : `/api/users`;
+               await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)});
+               bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+               loadUsers();
+            };
+
+            document.getElementById('classForm').onsubmit = async e => {
+               e.preventDefault();
+               const id = document.getElementById('class_id').value;
+               const data = Object.fromEntries(new FormData(e.target));
+               const method = id ? 'PUT' : 'POST';
+               const url = id ? `/api/classes/${id}` : `/api/classes`;
+               await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)});
+               bootstrap.Modal.getInstance(document.getElementById('classModal')).hide();
+               loadClasses();
+            };
+
+            document.getElementById('typeForm').onsubmit = async e => {
+               e.preventDefault();
+               const id = document.getElementById('hazard_id').value;
+               const data = Object.fromEntries(new FormData(e.target));
+               const method = id ? 'PUT' : 'POST';
+               const url = id ? `/api/types/${id}` : `/api/types`;
+               await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)});
+               bootstrap.Modal.getInstance(document.getElementById('typeModal')).hide();
+               loadTypes();
+            };
+         });
+
+         //--- Edit/Delete Handler ---
+         window.editUser = async (id) => {
+            const u = (await (await fetch(`/api/users/${id}`)).json());
+            await populateDropdown('/api/user-types', 'user_type_id', 'user_type_name', 'user_type_id');
+            document.getElementById('user_id').value = u.user_id;
+            document.getElementById('username').value = u.username;
+            document.getElementById('email').value = u.email;
+            document.getElementById('phone').value = u.phone || '';
+            document.getElementById('password').value = '';
+            document.getElementById('user_type_id').value = u.user_type_id;
+            new bootstrap.Modal(document.getElementById('userModal')).show();
+         };
+         window.deleteUser = async (id) => {
+            if (confirm('Delete this user?')) {
+               await fetch(`/api/users/${id}`, {method:'DELETE'});
+               loadUsers();
+            }
+         };
+
+         window.editClass = async (id) => {
+            const c = (await (await fetch(`/api/classes/${id}`)).json());
+            document.getElementById('class_id').value = c.class_id;
+            document.getElementById('class_name').value = c.class_name;
+            document.getElementById('class_desc').value = c.class_desc || '';
+            new bootstrap.Modal(document.getElementById('classModal')).show();
+         };
+         window.deleteClass = async (id) => {
+            if (confirm('Delete this class?')) {
+               await fetch(`/api/classes/${id}`, {method:'DELETE'});
+               loadClasses();
+            }
+         };
+
+         window.editType = async (id) => {
+            const t = (await (await fetch(`/api/types/${id}`)).json());
+            await populateDropdown('/api/classes', 'hazard_class_id', 'class_name', 'class_id');
+            document.getElementById('hazard_id').value = t.hazard_id;
+            document.getElementById('hazard_name').value = t.hazard_name;
+            document.getElementById('hazard_desc').value = t.hazard_desc || '';
+            document.getElementById('hazard_class_id').value = t.class_id;
+            new bootstrap.Modal(document.getElementById('typeModal')).show();
+         };
+         window.deleteType = async (id) => {
+            if (confirm('Delete this type?')) {
+               await fetch(`/api/types/${id}`, {method:'DELETE'});
+               loadTypes();
+            }
+         };
+
+      // End: Maintenance Functionality
+      </script>
+
+
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <!-- *******************************************************  Reports Functionality  ******************************************* -->
+      <!--------------------------------------------------------------------------------------------------------------------------------->
+      <script>
+         // --- 1. Weekly Hazard Report ---
+         async function loadWeeklyReport() {
+            const res = await fetch('/api/reports/weekly');
+            const data = await res.json();
+            let html = '';
+            for (const week in data) {
+               html += `<h6 class="mt-1" style="color: #0d6efd">Week: ${week}</h6>
+               <table class="table table-bordered table-sm mb-3">
+                  <thead>
+                     <tr>
+                        <th>ID</th><th>Description</th><th>Latitude</th><th>Longitude</th>
+                        <th>Hazard Type</th><th>Status</th><th>Severity</th>
+                        <th>Reported By</th><th>Date Reported</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     ${data[week].map(row => `
+                        <tr>
+                           <td>${row.hazard_id}</td>
+                           <td>${row.hazard_desc}</td>
+                           <td>${row.latitude}</td>
+                           <td>${row.longitude}</td>
+                           <td>${row.hazard_type}</td>
+                           <td>${row.status}</td>
+                           <td>${row.severity}</td>
+                           <td>User ID: ${row.user_id}</td>
+                           <td>${row.date_reported}</td>
+                        </tr>`).join('')}
+                  </tbody>
+               </table>`;
+            }
+            document.getElementById('weeklyReportTable').innerHTML = html;
+            document.getElementById('exportWeekly').onclick = () => {
+               // Flatten and export all rows (with week column)
+               let rows = [];
+               for (const week in data) {
+                  rows = rows.concat(data[week].map(row => ({ week, ...row })));
+               }
+               exportCSV(rows, ['week','hazard_id','hazard_desc','latitude','longitude','hazard_type','status','severity','user_id','date_reported'], 'weekly_hazards.csv');
+            };
+         }
+
+         // --- 2. Monthly Hazard Report ---
+         async function loadMonthlyReport() {
+            const res = await fetch('/api/reports/monthly');
+            const data = await res.json();
+            let html = '';
+            for (const month in data) {
+               html += `<h6 class="mt-1" style="color: #0d6efd">Month: ${month}</h6>
+               <table class="table table-bordered table-sm mb-3">
+                  <thead>
+                     <tr>
+                        <th>ID</th><th>Description</th><th>Latitude</th><th>Longitude</th>
+                        <th>Hazard Type</th><th>Status</th><th>Severity</th>
+                        <th>Reported By</th><th>Date Reported</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     ${data[month].map(row => `
+                     <tr>
+                        <td>${row.hazard_id}</td>
+                        <td>${row.hazard_desc}</td>
+                        <td>${row.latitude}</td>
+                        <td>${row.longitude}</td>
+                        <td>${row.hazard_type}</td>
+                        <td>${row.status}</td>
+                        <td>${row.severity}</td>
+                        <td>User ID: ${row.user_id}</td>
+                        <td>${row.date_reported}</td>
+                     </tr>`).join('')}
+                  </tbody>
+               </table>`;
+            }
+            document.getElementById('monthlyReportTable').innerHTML = html;
+            document.getElementById('exportMonthly').onclick = () => {
+               let rows = [];
+               for (const month in data) {
+                  rows = rows.concat(data[month].map(row => ({ month, ...row })));
+               }
+               exportCSV(rows, ['month','hazard_id','hazard_desc','latitude','longitude','hazard_type','status','severity','user_id','date_reported'], 'monthly_hazards.csv');
+            };
+         }
+
+         // --- 3. Unresolved/Open Hazards ---
+         async function loadUnresolvedReport() {
+            const res = await fetch('/api/reports/unresolved');
+            const data = await res.json();
+            const table = document.createElement('table');
+            table.className = 'table table-bordered table-sm';
+            table.innerHTML = `
+               <thead>
+                  <tr>
+                     <th>ID</th><th>Description</th><th>Latitude</th><th>Longitude</th>
+                     <th>Hazard Type</th><th>Status</th><th>Severity</th>
+                     <th>Reported By</th><th>Date Reported</th>
+                  </tr>
+               </thead>
+               <tbody>
+                  ${data.map(row => `<tr>
+                     <td>${row.hazard_id}</td>
+                     <td>${row.hazard_desc}</td>
+                     <td>${row.latitude}</td>
+                     <td>${row.longitude}</td>
+                     <td>${row.hazard_type}</td>
+                     <td>${row.status}</td>
+                     <td>${row.severity}</td>
+                     <td>User ID: ${row.user_id}</td>
+                     <td>${row.date_reported}</td>
+                  </tr>`).join('')}
+               </tbody>`;
+            document.getElementById('unresolvedTable').innerHTML = '';
+            document.getElementById('unresolvedTable').appendChild(table);
+            document.getElementById('exportUnresolved').onclick = () =>
+            exportCSV(data, ['hazard_id','hazard_desc','latitude','longitude','hazard_type','status','severity','user_id','date_reported'], 'unresolved_hazards.csv');
+         }
+
+         // --- 4. Resolution Rate by Hazard Type ---
+         async function loadResolutionReport() {
+            const res = await fetch('/api/reports/resolution-rate');
+            const data = await res.json();
+            const table = document.createElement('table');
+            table.className = 'table table-bordered table-sm';
+            table.innerHTML = `
+               <thead>
+                  <tr><th>Hazard Type</th><th>Total Reports</th><th>Resolved</th><th>Resolution Rate (%)</th></tr>
+               </thead>
+               <tbody>
+                  ${data.map(r => `<tr>
+                     <td>${r.hazard_type}</td>
+                     <td>${r.total}</td>
+                     <td>${r.resolved}</td>
+                     <td>${r.resolution_rate}</td>
+                  </tr>`).join('')}
+               </tbody>`;
+            document.getElementById('resolutionTable').innerHTML = '';
+            document.getElementById('resolutionTable').appendChild(table);
+            document.getElementById('exportResolution').onclick = () =>
+            exportCSV(data, ['hazard_type','total','resolved','resolution_rate'], 'resolution_rate_by_type.csv');
+         }
+
+         // --- 5. Resolved/Rejected Reports ---
+         async function loadResolvedRejectedReport() {
+            const res = await fetch('/api/reports/resolved-rejected');
+            const data = await res.json();
+            const table = document.createElement('table');
+            table.className = 'table table-bordered table-sm';
+            table.innerHTML = `
+               <thead>
+                  <tr>
+                     <th>ID</th><th>Description</th><th>Latitude</th><th>Longitude</th><th>Hazard Type</th><th>Votes</th>
+                     <th>Flags</th><th>Status</th><th>Severity</th><th>Reported By</th><th>Date Reported</th>
+                  </tr>
+               </thead>
+               <tbody>
+                  ${data.map(row => `<tr>
+                     <td>${row.hazard_id}</td>
+                     <td>${row.hazard_desc}</td>
+                     <td>${row.latitude}</td>
+                     <td>${row.longitude}</td>
+                     <td>${row.hazard_type}</td>
+                     <td>${row.vote_count}</td>
+                     <td>${row.flag_count}</td>
+                     <td>${row.status}</td>
+                     <td>${row.severity}</td>
+                     <td>User ID: ${row.user_id}</td>
+                     <td>${row.date_reported}</td>
+                  </tr>`).join('')}
+               </tbody>`;
+            document.getElementById('resolvedRejectedTable').innerHTML = '';
+            document.getElementById('resolvedRejectedTable').appendChild(table);
+            document.getElementById('exportResolvedRejected').onclick = () =>
+            exportCSV(data, ['hazard_id','hazard_desc','latitude','longitude','hazard_type','vote_count','flag_count','status','severity','user_id','date_reported'], 'resolved_rejected_hazards.csv');
+         }
+
+         // --- CSV Export Utility ---
+         function exportCSV(data, fields, filename) {
+            const csv = [
+               fields.join(','), // header
+               ...data.map(row => fields.map(f => `"${(row[f]??'').toString().replace(/"/g,'""')}"`).join(','))
+            ].join('\r\n');
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+         }
+
+         // --- Tab switching: load correct report on tab switch ---
+         document.querySelectorAll('#reportTabs button[data-bs-toggle="tab"]').forEach(btn => {
+            btn.addEventListener('shown.bs.tab', function(e) {
+               const target = e.target.getAttribute('data-bs-target');
+               if (target === "#weeklyReportTab") loadWeeklyReport();
+               else if (target === "#monthlyReportTab") loadMonthlyReport();
+               else if (target === "#unresolvedTab") loadUnresolvedReport();
+               else if (target === "#resolutionTab") loadResolutionReport();
+               else if (target === "#resolvedRejectedTab") loadResolvedRejectedReport();
+            });
+         });
+
+         // --- Load weekly hazard report on initial page load ---
+         loadWeeklyReport();
+
+      // End: Report Functionality
+      </script>
+
+   </body>
+</html>

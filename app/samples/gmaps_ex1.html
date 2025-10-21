@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Basic Google Map</title>
+    <style>
+      /* Make the map fill the page */
+      #map { height: 100vh; width: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      // This function is called by the API once it loads
+      function initMap() {
+        // Center the map at a given LatLng
+        const auckland = { lat: -36.8485, lng: 174.7633 };
+        const map = new google.maps.Map(document.getElementById("map"), {
+          zoom: 12,
+          center: auckland,
+        });
+
+        // Add a marker
+        const marker = new google.maps.Marker({
+          position: auckland,
+          map: map,
+          title: "Hello, Auckland!",
+        });
+
+        // Attach an InfoWindow
+        const infowindow = new google.maps.InfoWindow({
+          content: "<strong>Auckland City Center</strong>",
+        });
+        marker.addListener("click", () => infowindow.open(map, marker));
+      
+        addmarker({lat:40.983144,lng:-78.401833});
+        
+        // Function to add markers
+        function addmarker(coords) {
+          const marker = new google.maps.Marker({
+            position: auckland,
+            map: map,
+            icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'
+          });
+        }
+
+
+        // In initMap(): Geocoding (address → coordinates)
+        const geocoder = new google.maps.Geocoder();
+        geocodeAddress(geocoder, map);
+
+
+        // In initMap(): Directions and routing
+        const directionsService = new google.maps.DirectionsService();
+        const directionsRenderer = new google.maps.DirectionsRenderer();
+        directionsRenderer.setMap(map);
+        calculateAndDisplayRoute(directionsService, directionsRenderer);
+      }
+
+      // Geocoding (address → coordinates)
+      // After loading the Maps JS API with &libraries=places
+      function geocodeAddress(geocoder, map) {
+        const address = "1600 Amphitheatre Parkway, Mountain View, CA";
+        geocoder.geocode({ address: address }, (results, status) => {
+          if (status === "OK") {
+            map.setCenter(results[0].geometry.location);
+            new google.maps.Marker({
+              map: map,
+              position: results[0].geometry.location,
+            });
+          } else {
+            alert("Geocode was not successful: " + status);
+          }
+        });
+      }
+
+      // Directions and routing
+      function calculateAndDisplayRoute(directionsService, directionsRenderer) {
+        directionsService.route(
+          {
+            origin: { lat: -36.8485, lng: 174.7633 },     // start
+            destination: { lat: -36.8630, lng: 174.7770 }, // end
+            travelMode: google.maps.TravelMode.DRIVING,
+          },
+          (response, status) => {
+            if (status === "OK") {
+              directionsRenderer.setDirections(response);
+            } else {
+              window.alert("Directions request failed: " + status);
+            }
+          }
+        );
+      }
+
+    </script>
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUqJv_YMAL1t-tW5MfZ-9f1aki4iXC2C0&callback=initMap"
+      async
+    ></script>
+  </body>
+</html>

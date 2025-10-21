@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Map with Markers & InfoWindows</title>
+  <style>
+    /* Make the map fill the viewport */
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <!-- We'll load the API and call initMap() -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUqJv_YMAL1t-tW5MfZ-9f1aki4iXC2C0&callback=initMap"
+    async
+  ></script>
+  <script>
+    // Your JavaScript will go here
+    function initMap() {
+      // 2.1: Choose your center point
+      const centerCoords = { lat: -36.8485, lng: 174.7633 }; // Auckland
+  
+      // 2.2: Instantiate the map
+      const map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 12,
+        center: centerCoords,
+      });
+
+      // 2.3: Call a function to add markers (we’ll write this next)
+      addMarkers(map);
+    }
+
+    const locations = [
+      {
+        position: { lat: -36.8485, lng: 174.7633 },
+        title: "Auckland City Center",
+        infoContent: "<h3>Auckland</h3><p>New Zealand’s largest city.</p>"
+      },
+      {
+        position: { lat: -36.8702, lng: 174.7663 },
+        title: "Sky Tower",
+        infoContent: "<h3>Sky Tower</h3><p>Panoramic views & dining.</p>"
+      },
+      // …add as many as you like
+    ];
+
+    function addMarkers(map) {
+      // Create one InfoWindow instance that we’ll reuse
+      const infoWindow = new google.maps.InfoWindow();
+
+      // Loop through each location
+      locations.forEach(({ position, title, infoContent }) => {
+        // 4.1: Create the marker
+        const marker = new google.maps.Marker({
+          position,
+          map,
+          title,              // mouse-over tooltip
+          icon: 'https://maps.google.com/intl/en_us/mapfiles/ms/micons/orange-dot.png',
+          // icon: 'path/to/custom-icon.png'   // optional custom icon
+          // icon: pinSymbol('#00FF00'),
+          //icon: {
+          //  url: svgUrl,
+          //  anchor: new google.maps.Point(20, 40),  // bottom-center of the SVG
+          //},
+          animation: google.maps.Animation.DROP
+        });
+
+        // 4.2: Add click listener to open InfoWindow
+        marker.addListener("click", () => {
+          infoWindow.setContent(infoContent);
+          infoWindow.open(map, marker);
+        });
+      });
+    }
+
+    function pinSymbol(color) {
+  return {
+    path: 'M0,0 C-2,-20 -10,-22 -10,-30 A10,10 0 1,1 10,-30 C10,-22 2,-20 0,0 z',
+    fillColor: color,
+    fillOpacity: 1,
+    strokeColor: '#000',
+    strokeWeight: 2,
+    scale: 1,
+    anchor: new google.maps.Point(0, 0),
+    labelOrigin: new google.maps.Point(0, -30)
+  };
+}
+
+// 2) A small black dot
+function centerDot(radius = 3) {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    fillColor: '#000',
+    fillOpacity: 1,
+    strokeWeight: 0,
+    scale: radius,       // radius in pixels
+    anchor: new google.maps.Point(0, 0),
+  };
+}
+
+const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+  <!-- Orange pin -->
+  <path d="
+    M20,40
+    C18,20 10,18 10,10
+    A10,10 0 1,1 30,10
+    C30,18 22,20 20,40
+    Z
+  " fill="#FF9900" stroke="#000" stroke-width="2"/>
+  <!-- Black center dot -->
+  <circle cx="20" cy="10" r="3" fill="#000"/>
+</svg>`.trim();
+
+// Data URI encode (no line-breaks):
+const svgUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+
+  </script>
+</body>
+</html>
