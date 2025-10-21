@@ -30,7 +30,7 @@ The study addresses the slow and fragmented nature of traditional road hazard re
 # Distinction
 Capstone Project was nominated for publication in IT Journals/Conferences
 
-# Steps to run
+# Steps to run (for updating)
 1. Verify Node.js (v22.11.0) and npm (11.3.0) is installed
    node -v
    npm -v, npm install -g npm@latest
