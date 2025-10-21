@@ -17,13 +17,15 @@ The study addresses the slow and fragmented nature of traditional road hazard re
 3. Embedding interactive dashboards and open-data interfaces to support data-driven decision-making by planners and safety authorities
 
 # System Design
-1. Architecture: Node.js/Express backend, SQLite database, JavaScript-based frontend, and Google Maps API integration.
+1. Architecture:
+   - Node.js/Express backend, SQLite database, JavaScript-based frontend, and Google Maps API integration.
 2. Key Features:
    - Real-time hazard reporting and map visualization.
    - Dual verification (peer + authority).
    - Analytics dashboards and CSV data exports.
    - Role-based access, encryption of PII, and AES-256 hashing for security.
-Methodology: Agile iterative development with testing and evaluation phases assessing precision, recall, false-positive rate, and system uptime.
+3. Methodology:
+   - Agile iterative development with testing and evaluation phases assessing precision, recall, false-positive rate, and system uptime.
 
 # Awards
 Capstone Project was nominated for publication in IT Journals/Conferences
