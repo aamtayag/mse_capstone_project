@@ -1,6 +1,6 @@
 # Master of Software Engineering (MSE) Capstone Project
 
-# Title of Study:
+# Title of Study
 SafeRoads Navigator: A System for Real-Time Road Hazards Management Using
 Crowdsourced Data and Dual Vetting Approach
 
@@ -25,10 +25,10 @@ The study addresses the slow and fragmented nature of traditional road hazard re
    - Role-based access, encryption of PII, and AES-256 hashing for security.
 Methodology: Agile iterative development with testing and evaluation phases assessing precision, recall, false-positive rate, and system uptime.
 
-# Awards:
+# Awards
 Capstone Project was nominated for publication in IT Journals/Conferences
 
-# Steps to run:
+# Steps to run
 1. Verify Node.js (v22.11.0) and npm (11.3.0) is installed
    node -v
    npm -v, npm install -g npm@latest
