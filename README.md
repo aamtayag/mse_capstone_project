@@ -25,6 +25,8 @@ The study addresses the slow and fragmented nature of traditional road hazard re
    - Role-based access, encryption of PII, and AES-256 hashing for security.
 Methodology: Agile iterative development with testing and evaluation phases assessing precision, recall, false-positive rate, and system uptime.
 
+# Awards:
+Capstone Project was nominated for publication in IT Journals/Conferences
 
 # Steps to run:
 1. Verify Node.js (v22.11.0) and npm (11.3.0) is installed
